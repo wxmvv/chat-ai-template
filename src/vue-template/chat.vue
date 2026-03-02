@@ -147,6 +147,7 @@ const onCompositionEnd = (event) => {
 const clear = () => {
 	inputValue.value = '';
 	editorRef.value.innerHTML = '';
+	hasContent.value = false;
 };
 
 const updateMultiline = () => {
