@@ -70,25 +70,33 @@ const createChatStream = (config = {}) => {
 			});
 
 			if (!response.ok) throw new Error(`HTTP ${response.status}`);
+			if (!response.body) throw new Error('No response body');
 			onResponse?.(response);
 
 			reader = response.body.getReader();
 			const decoder = new TextDecoder('utf-8');
 			let buffer = '';
+			let loop = true;
 
-			while (true) {
-				// if (controller.signal?.aborted) return reader.cancel();
-				const { done, value } = await reader.read();
+			while (loop) {
+				const result = await reader.read().catch(() => null);
+				if (!result) break;
+
+				const { done, value } = result;
 				if (done) break;
 
 				buffer += decoder.decode(value, { stream: true });
 
 				const parts = buffer.split('\n');
-				buffer = parts.pop(); // 保留未完成行
+				buffer = parts.pop() || '';
 
 				for (const part of parts) {
+					// if (!part.trim()) continue;
 					if (!part.startsWith('data: ')) continue;
-					if (part.includes('[DONE]')) return finish();
+					if (part.includes('[DONE]')) {
+						loop = false;
+						break;
+					}
 
 					const data = JSON.parse(part.slice(6));
 					const content = data.choices?.[0]?.delta?.content;
@@ -100,6 +108,10 @@ const createChatStream = (config = {}) => {
 		} catch (err) {
 			if (err.name === 'AbortError') onAbort?.();
 			else onError?.(err);
+		} finally {
+			try {
+				reader?.releaseLock?.();
+			} catch {}
 			cleanup();
 			onEnd?.();
 		}
@@ -109,9 +121,7 @@ const createChatStream = (config = {}) => {
 		console.log('Aborting stream', controller);
 		if (!streaming) return;
 		controller?.abort();
-		reader?.cancel();
-		cleanup();
-		onEnd?.();
+		reader?.cancel()?.catch(() => {});
 	};
 
 	const finish = () => {
