@@ -2,8 +2,8 @@ import type { AIApi, ChatStreamConfig, ChatStreamInstance, ModelInfo, ModelListR
 
 export { ChatStreamConfig, ChatStreamInstance, ModelInfo, ModelListResponse, BalanceInfo, BalanceResponse };
 
-export interface DeepSeekAPI extends AIApi {}
+export interface OllamaAPI extends AIApi {}
 
-export const deepseek: DeepSeekAPI;
+export const ollama: OllamaAPI;
 
-export default deepseek;
+export default ollama;
