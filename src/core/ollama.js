@@ -131,10 +131,17 @@ const getModelList = async (headers = DefaultHeaders) => {
 		method: 'GET',
 		headers: headers
 	});
-	if (!response.ok) {
-		throw new Error('Network response was not ok');
-	}
-	return response.json();
+	if (!response.ok) throw new Error('Network response was not ok');
+
+	const data = await response.json();
+
+	return {
+		object: 'list',
+		data: data.models.map((item) => ({
+			id: item.name,
+			object: 'model'
+		}))
+	};
 };
 
 const getBalance = async (headers = DefaultHeaders) => {

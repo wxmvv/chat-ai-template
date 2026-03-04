@@ -29,12 +29,12 @@ const goBack = () => {
 
 const providerList = [
 	{
-		name: 'deepseek',
-		api: deepseek
-	},
-	{
 		name: 'ollama',
 		api: ollama
+	},
+	{
+		name: 'deepseek',
+		api: deepseek
 	}
 ];
 const provider = ref(providerList[0]);
@@ -44,12 +44,17 @@ watch(
 	() => provider.value,
 	(v) => {
 		if (!v) return;
-		v.api.getModelList().then((res) => {
-			console.log(res.models);
-			modelList.value = res.models;
-			model.value = modelList.value[0] || null;
-			console.log('modelList', modelList.value, model.value);
-		});
+		v.api
+			.getModelList()
+			.then((list) => {
+				modelList.value = list.data;
+				model.value = modelList.value[0] || null;
+			})
+			.catch((err) => {
+				console.log(err);
+				modelList.value = null;
+				model.value = null;
+			});
 	},
 	{ immediate: true }
 );
@@ -89,6 +94,11 @@ const sendMessage = async (question = inputValue.value) => {
 	clear();
 
 	const contentRef = ref('');
+
+	const params = {
+		model: model.value.id
+	};
+
 	chatStreamRef.value = provider.value.api.createChatStream({
 		onStart: () => (isStreaming.value = true),
 		onResponse: (r) => {
@@ -106,7 +116,8 @@ const sendMessage = async (question = inputValue.value) => {
 		},
 		onError: (err) => console.log(err),
 		onAbort: () => console.log('abort success'),
-		onEnd: () => (isStreaming.value = false)
+		onEnd: () => (isStreaming.value = false),
+		...params
 	});
 	await chatStreamRef.value.start(question);
 };
@@ -183,7 +194,10 @@ const updateMultiline = () => {
 	<!-- 输入框 -->
 	<div class="chat-container">
 		<div class="chat-msg-container">
+			<!-- 返回选择模版页 -->
 			<div v-if="!hasMessages" class="page-title">{{ pageTitle }}</div>
+
+			<!-- 切换模型与提供商的按钮 -->
 			<button v-if="showBack" class="icon-btn page-back" @click="goBack">
 				<ArrowUp />
 			</button>
@@ -193,13 +207,19 @@ const updateMultiline = () => {
 						{{ p.name }}
 					</option>
 				</select>
-				<select class="ai-info-item" v-model="model">
-					<option v-for="m in modelList" :key="m" :value="m">
-						{{ m.model }}
-					</option>
-				</select>
+				<template v-if="modelList">
+					<select class="ai-info-item" v-model="model">
+						<option v-for="m in modelList" :key="m" :value="m">
+							{{ m.id || '未选择' }}
+						</option>
+					</select>
+				</template>
+				<template v-else>
+					<div class="ai-info-item">无法获取模型列表</div>
+				</template>
 			</div>
 
+			<!-- 消息列表 -->
 			<div
 				class="chat-msg"
 				v-for="message in messages"
@@ -229,12 +249,15 @@ const updateMultiline = () => {
 				</template>
 			</div>
 		</div>
+
+		<!-- 输入框 -->
 		<div class="chat-input-container">
 			<div
 				class="chat-input"
 				:class="{ focus: isFocus, disabled }"
 				@click.stop
 			>
+				<!-- 真实输入框 -->
 				<div
 					class="chat-input-editor grid-area-primary"
 					data-empty="true"
@@ -249,6 +272,7 @@ const updateMultiline = () => {
 					@compositionend="onCompositionEnd"
 				></div>
 
+				<!-- 更多按钮 -->
 				<button
 					class="icon-btn primary grid-area-leading"
 					type="button"
@@ -257,6 +281,7 @@ const updateMultiline = () => {
 					<Plus />
 				</button>
 
+				<!-- 发送按钮 -->
 				<button
 					class="icon-btn secondary grid-area-trailing"
 					type="button"
@@ -267,11 +292,11 @@ const updateMultiline = () => {
 					<template v-else><ArrowUp /></template>
 				</button>
 
+				<!-- 隐藏的文本框 -->
 				<textarea
 					class="hidden-textarea"
 					id="hidden-textarea"
 					autofocus
-					@keydown="handleKeydown"
 					@focus="isFocus = true"
 					@blur="isFocus = false"
 					disabled
