@@ -127,7 +127,7 @@ const createChatStream = (config = {}) => {
 };
 
 const getModelList = async (headers = DefaultHeaders) => {
-	const response = await fetch('https://api.deepseek.com/models', {
+	const response = await fetch('http://localhost:11434/api/tags', {
 		method: 'GET',
 		headers: headers
 	});
@@ -138,7 +138,7 @@ const getModelList = async (headers = DefaultHeaders) => {
 };
 
 const getBalance = async (headers = DefaultHeaders) => {
-	const response = await fetch('https://api.deepseek.com/user/balance', {
+	const response = await fetch('http://localhost:11434/api/tags', {
 		method: 'GET',
 		headers: headers
 	});

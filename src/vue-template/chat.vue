@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import ArrowUp from '../icon/arrowUp.svg?component';
 import Plus from '../icon/plus.svg?component';
 import Stop from '../icon/stop.svg?component';
@@ -27,12 +27,32 @@ const goBack = () => {
 	document.querySelector('#app').style.display = 'flex';
 };
 
-const aiList = {
-	deepseek,
-	ollama
-};
-const ai = aiList.ollama;
-const aiName = 'ollama';
+const providerList = [
+	{
+		name: 'deepseek',
+		api: deepseek
+	},
+	{
+		name: 'ollama',
+		api: ollama
+	}
+];
+const provider = ref(providerList[0]);
+const modelList = ref();
+const model = ref();
+watch(
+	() => provider.value,
+	(v) => {
+		if (!v) return;
+		v.api.getModelList().then((res) => {
+			console.log(res.models);
+			modelList.value = res.models;
+			model.value = modelList.value[0] || null;
+			console.log('modelList', modelList.value, model.value);
+		});
+	},
+	{ immediate: true }
+);
 
 // input state
 const inputValue = ref('');
@@ -69,7 +89,7 @@ const sendMessage = async (question = inputValue.value) => {
 	clear();
 
 	const contentRef = ref('');
-	chatStreamRef.value = ai.createChatStream({
+	chatStreamRef.value = provider.value.api.createChatStream({
 		onStart: () => (isStreaming.value = true),
 		onResponse: (r) => {
 			console.log('streaming', r);
@@ -167,7 +187,19 @@ const updateMultiline = () => {
 			<button v-if="showBack" class="icon-btn page-back" @click="goBack">
 				<ArrowUp />
 			</button>
-			<div class="ai-info">{{ aiName }}</div>
+			<div class="ai-info">
+				<select class="ai-info-item" v-model="provider">
+					<option v-for="p in providerList" :key="p" :value="p">
+						{{ p.name }}
+					</option>
+				</select>
+				<select class="ai-info-item" v-model="model">
+					<option v-for="m in modelList" :key="m" :value="m">
+						{{ m.model }}
+					</option>
+				</select>
+			</div>
+
 			<div
 				class="chat-msg"
 				v-for="message in messages"
@@ -272,7 +304,7 @@ const updateMultiline = () => {
 	/* 背景模糊 */
 	backdrop-filter: blur(10px);
 	padding: calc(var(--spacing) * 0.5);
-	border: #f5f1f1 solid 1px !important;
+	border: none !important;
 }
 .ai-info {
 	height: 2.25rem;
@@ -281,13 +313,30 @@ const updateMultiline = () => {
 	position: fixed;
 	color: var(--text-color);
 	top: var(--spacing);
-	left: calc(var(--spacing) * 3 + 2.25rem);
-	border-radius: 28px;
-	backdrop-filter: blur(10px);
+	left: calc(var(--spacing) * 4 + 2.25rem);
 	background-color: transparent;
+	display: flex;
+	flex-direction: row;
+	gap: calc(var(--spacing) * 3);
+	align-items: center;
+	justify-content: center;
+}
+.ai-info-item {
+	height: 100%;
 	padding-inline: calc(var(--spacing) * 4);
 	text-align: center;
 	align-content: center;
+	border-radius: 28px;
+	backdrop-filter: blur(10px);
+	background-color: transparent;
+	margin: 0;
+	font-size: medium;
+	/* 删除select默认样式 */
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	appearance: none;
+	outline: none;
+	border: none;
 }
 
 .chat-container {
@@ -351,7 +400,10 @@ const updateMultiline = () => {
 	display: flex;
 	flex-direction: column;
 	height: auto;
-	min-height: calc(100% - var(--spacing) * 19); /* 让输入框处于最下方 */
+	min-height: calc(
+		100% - var(--spacing) * 19 - var(--spacing) * 10
+	); /* 让输入框处于最下方 */
+	padding-top: calc(var(--spacing) * 10);
 	width: 100%;
 	background-color: transparent;
 }
@@ -400,6 +452,7 @@ const updateMultiline = () => {
 	text-align: left;
 }
 
+/* input-container */
 .chat-input-container {
 	display: flex;
 	padding-bottom: calc(var(--spacing) * 5);
@@ -411,6 +464,20 @@ const updateMultiline = () => {
 	isolation: isolate;
 	position: sticky;
 	bottom: 0;
+	z-index: 10;
+}
+.chat-input-container::after {
+	content: '';
+	position: absolute;
+	inset: 0;
+	pointer-events: none;
+	--fade-height: 128px;
+	z-index: -1;
+	background: linear-gradient(
+		to bottom,
+		transparent calc(100% - var(--fade-height)),
+		var(--bg-color) 100%
+	);
 }
 
 .chat-input {
