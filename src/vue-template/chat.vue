@@ -4,15 +4,17 @@ import ArrowUp from '../icon/arrowUp.svg?component';
 import Plus from '../icon/plus.svg?component';
 import Stop from '../icon/stop.svg?component';
 
+// import hljs from 'highlight.js';
 import markdownit from 'markdown-it';
 const md = markdownit({
-	// Enable HTML tags in source
-	html: true,
+	// WARNING: html: true allows HTML tags, which poses XSS security risks
+	// Consider setting html: false or adding HTML sanitization (e.g., DOMPurify) in production
+	html: false,
 	xhtmlOut: true,
 	breaks: true,
 	langPrefix: 'language-',
-	linkify: false,
-	typographer: false,
+	linkify: true, // Enable automatic link detection
+	typographer: true, // Enable typographic replacements
 	quotes: '“”‘’'
 }).enable('table');
 
@@ -80,6 +82,21 @@ const isStreaming = ref(false);
 // emit
 const emit = defineEmits(['submit', 'focus', 'blur']);
 
+// helper functions
+const updateMessageContent = (messageId, contentToAdd) => {
+	const index = messages.value.findIndex((msg) => msg.id === messageId);
+	if (index !== -1) {
+		messages.value[index].raw += contentToAdd;
+	}
+};
+
+const updateMessageStatus = (messageId, status) => {
+	const index = messages.value.findIndex((msg) => msg.id === messageId);
+	if (index !== -1) {
+		messages.value[index].status = status;
+	}
+};
+
 // send message
 const sendMessage = async (question = inputValue.value) => {
 	console.log('sendMessage', question);
@@ -87,36 +104,54 @@ const sendMessage = async (question = inputValue.value) => {
 	messages.value.push({
 		id: UUID(),
 		type: 'user', // ai | user
-		content: question,
+		rendered: question,
+		raw: question,
 		timestamp: Date.now(),
 		status: 'sent'
 	});
 	clear();
 
-	const contentRef = ref('');
+	// 提前生成AI消息ID
+	const aiMessageId = UUID();
 
 	const params = {
 		model: model.value.id
 	};
 
+	// 创建AI消息（初始内容为空）
+	messages.value.push({
+		id: aiMessageId,
+		type: 'ai',
+		rendered: '', // markdown渲染后的内容 暂时未使用
+		raw: '', // 初始为空字符串, 原始token
+		tail: '', // 尾部文本 未来考虑做分段渲染
+		timestamp: Date.now(),
+		status: 'streaming'
+	});
+
 	chatStreamRef.value = provider.value.api.createChatStream({
-		onStart: () => (isStreaming.value = true),
+		onStart: () => {
+			isStreaming.value = true;
+			updateMessageStatus(aiMessageId, 'streaming');
+		},
 		onResponse: (r) => {
 			console.log('streaming', r);
-			messages.value.push({
-				id: UUID(),
-				type: 'ai', // ai | user
-				content: contentRef,
-				timestamp: Date.now(),
-				status: 'sent'
-			});
 		},
 		onToken: (t) => {
-			contentRef.value += t;
+			updateMessageContent(aiMessageId, t);
 		},
-		onError: (err) => console.log(err),
-		onAbort: () => console.log('abort success'),
-		onEnd: () => (isStreaming.value = false),
+		onError: (err) => {
+			console.log(err);
+			updateMessageStatus(aiMessageId, 'error');
+		},
+		onAbort: () => {
+			console.log('abort success');
+			updateMessageStatus(aiMessageId, 'aborted');
+		},
+		onEnd: () => {
+			isStreaming.value = false;
+			updateMessageStatus(aiMessageId, 'sent');
+		},
 		...params
 	});
 	await chatStreamRef.value.start(question);
@@ -231,20 +266,20 @@ const updateMultiline = () => {
 				<template v-if="message.type === 'user'">
 					<!-- 纯文本渲染 -->
 					<div class="chat-msg-content">
-						{{ message.content }}
+						{{ message.raw }}
 					</div>
 				</template>
 				<template v-else-if="message.type === 'ai'">
 					<!-- markdown 渲染 -->
 					<div
-						class="chat-msg-content"
-						v-html="md.render(message.content)"
+						class="chat-msg-content markdown-style"
+						v-html="md.render(message.raw)"
 					></div>
 				</template>
 				<template v-else>
 					<!-- 纯文本渲染 -->
 					<div class="chat-msg-content">
-						{{ message.content }}
+						{{ message.raw }}
 					</div>
 				</template>
 			</div>
@@ -307,7 +342,7 @@ const updateMultiline = () => {
 </template>
 
 <style scoped>
-/* 居中显示 */
+/* 非主要功能 */
 .page-title {
 	color: var(--text-color);
 	font-size: 24px;
@@ -364,6 +399,25 @@ const updateMultiline = () => {
 	border: none;
 }
 
+/* markdown渲染 */
+.markdown-style :deep(*) {
+	font-family: inherit;
+	font-size: inherit;
+	line-height: inherit;
+	color: inherit;
+	outline: none;
+	border: none;
+	background-color: transparent;
+}
+
+.markdown-style :deep(ul) {
+	padding-left: 30px;
+	outline: none;
+	border: none;
+	background-color: transparent;
+}
+
+/* 主要功能 */
 .chat-container {
 	height: 100%;
 	position: relative;
