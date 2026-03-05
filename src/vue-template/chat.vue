@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
 import ArrowUp from '../icon/arrowUp.svg?component';
+import ArrowDown from '../icon/arrowDown.svg?component';
 import Plus from '../icon/plus.svg?component';
 import Stop from '../icon/stop.svg?component';
 
@@ -64,6 +65,7 @@ watch(
 // input state
 const inputValue = ref('');
 const editorRef = ref(null);
+const chatContainerRef = ref(null);
 const placeholder = ref('询问任何问题');
 const isFocus = ref(false);
 const disabled = ref(false);
@@ -172,6 +174,7 @@ const sendMessage = async (question = inputValue.value) => {
 		},
 		onToken: (t) => {
 			updateMessageContent(aiMessageId, t);
+			scorllToBottom();
 		},
 		onError: (err) => {
 			console.log(err);
@@ -185,6 +188,7 @@ const sendMessage = async (question = inputValue.value) => {
 			endMessageRendering(aiMessageId);
 			isStreaming.value = false;
 			updateMessageStatus(aiMessageId, 'sent');
+			scorllToBottom();
 		},
 		...params
 	});
@@ -209,7 +213,21 @@ const updateMultilineStatus = () => {
 	isMultiline.value = el.scrollHeight > lineHeight + 2;
 };
 
+const scorllToBottom = () => {
+	// const el = document.querySelector('.chat-container');
+	const el = chatContainerRef.value;
+	if (!el) return;
+	// el.scrollTop = el.scrollHeight; // 直接滚动
+	el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' }); // 平滑滚动
+};
+
 // handler
+const handleScroll = (e) => {
+	if (e.target.scrollTop + e.target.clientHeight > e.target.scrollHeight - 100)
+		document.querySelector('.scroll-bottom-btn').style.opacity = 0;
+	else document.querySelector('.scroll-bottom-btn').style.opacity = 1;
+};
+
 const handleKeydown = (event) => {
 	if (disabled.value) return;
 	if (isComposing.value) return; // 输入法期间不处理 Enter
@@ -260,7 +278,7 @@ const onCompositionEnd = (event) => {
 
 <template>
 	<!-- 输入框 -->
-	<div class="chat-container">
+	<div class="chat-container" ref="chatContainerRef" @scroll="handleScroll">
 		<div class="chat-msg-container">
 			<!-- 返回选择模版页 -->
 			<div v-if="!hasMessages" class="page-title">{{ pageTitle }}</div>
@@ -369,6 +387,9 @@ const onCompositionEnd = (event) => {
 					disabled
 				></textarea>
 			</div>
+			<button class="scroll-bottom-btn" @click="scorllToBottom">
+				<ArrowDown />
+			</button>
 		</div>
 	</div>
 </template>
@@ -588,6 +609,31 @@ const onCompositionEnd = (event) => {
 	);
 }
 
+/* toBottom */
+.scroll-bottom-btn {
+	position: absolute;
+	cursor-pointer: pointer;
+	z-index: 30;
+	bg-clip-padding: border;
+	border-radius: 50%;
+	inset-inline-end: 50%;
+	padding: 0;
+	margin: 0;
+	transform: translateX(50%);
+	width: 32px;
+	height: 32px;
+	align-items: center;
+	justify-content: center;
+	bottom: calc(var(--spacing) * 6 + 24px + var(--spacing) * 8 + var(--spacing) * 5);
+	border: 1px solid transparent;
+	display: flex;
+	opacity: 0;
+	transition: opacity 0.2s ease-in-out;
+	backdrop-filter: blur(10px);
+	background-color: transparent;
+}
+
+/* input */
 .chat-input {
 	width: 100%;
 	height: auto;
