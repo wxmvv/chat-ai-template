@@ -80,20 +80,53 @@ const chatStreamRef = ref();
 const isStreaming = ref(false);
 
 // emit
-const emit = defineEmits(['submit', 'focus', 'blur']);
+const emit = defineEmits(['focus', 'blur']);
 
-// helper functions
-const updateMessageContent = (messageId, contentToAdd) => {
-	const index = messages.value.findIndex((msg) => msg.id === messageId);
-	if (index !== -1) {
-		messages.value[index].raw += contentToAdd;
+// helper functions for message
+// 判断是否安全渲染markdown
+const isSafeToFlush = (text) => {
+	// 双换行说明段落结束
+	if (text.includes('\n\n')) return true;
+
+	// 代码块闭合
+	const codeFenceMatches = text.match(/```/g);
+	if (codeFenceMatches && codeFenceMatches.length % 2 === 0) {
+		return true;
+	}
+
+	// 列表闭合
+	const listMatches = text.match(/(\*|-|\+|\d+\.)\s*$/g);
+	if (listMatches && listMatches.length % 2 === 0) {
+		return true;
+	}
+
+	return false;
+};
+
+const updateMessageContent = (messageId, token) => {
+	const msg = messages.value.find((m) => m.id === messageId);
+	if (!msg) return;
+	// msg.raw += token;
+	msg.tail += token;
+
+	// 判断是否安全渲染markdown
+	if (isSafeToFlush(msg.tail)) {
+		msg.rendered += md.render(msg.tail);
+		msg.tail = '';
 	}
 };
 
 const updateMessageStatus = (messageId, status) => {
-	const index = messages.value.findIndex((msg) => msg.id === messageId);
-	if (index !== -1) {
-		messages.value[index].status = status;
+	const msg = messages.value.find((m) => m.id === messageId);
+	if (!msg) return;
+	msg.status = status;
+};
+
+const endMessageRendering = (messageId) => {
+	const msg = messages.value.find((m) => m.id === messageId);
+	if (msg && msg.tail) {
+		msg.rendered += md.render(msg.tail);
+		msg.tail = '';
 	}
 };
 
@@ -122,9 +155,9 @@ const sendMessage = async (question = inputValue.value) => {
 	messages.value.push({
 		id: aiMessageId,
 		type: 'ai',
-		rendered: '', // markdown渲染后的内容 暂时未使用
+		rendered: '', // markdown渲染后的html
 		raw: '', // 初始为空字符串, 原始token
-		tail: '', // 尾部文本 未来考虑做分段渲染
+		tail: '', // 正在流式的纯文本
 		timestamp: Date.now(),
 		status: 'streaming'
 	});
@@ -149,6 +182,7 @@ const sendMessage = async (question = inputValue.value) => {
 			updateMessageStatus(aiMessageId, 'aborted');
 		},
 		onEnd: () => {
+			endMessageRendering(aiMessageId);
 			isStreaming.value = false;
 			updateMessageStatus(aiMessageId, 'sent');
 		},
@@ -159,6 +193,20 @@ const sendMessage = async (question = inputValue.value) => {
 
 const stopStreaming = () => {
 	chatStreamRef.value.abort();
+};
+
+const clear = () => {
+	inputValue.value = '';
+	editorRef.value.innerHTML = '';
+	hasContent.value = false;
+};
+
+const updateMultilineStatus = () => {
+	const el = editorRef.value;
+	if (!el) return;
+
+	const lineHeight = 24; // 和 CSS 保持一致
+	isMultiline.value = el.scrollHeight > lineHeight + 2;
 };
 
 // handler
@@ -194,7 +242,7 @@ const handleInput = (event) => {
 	inputValue.value = text; // 或 textContent
 	hasContent.value = text !== '';
 	el.dataset.empty = text === '' ? 'true' : 'false';
-	updateMultiline();
+	updateMultilineStatus();
 };
 
 const onCompositionStart = (event) => {
@@ -207,21 +255,6 @@ const onCompositionEnd = (event) => {
 	console.log('onCompositionEnd', event);
 	// 中文输入法 拼音结束
 	isComposing.value = false;
-};
-
-// func
-const clear = () => {
-	inputValue.value = '';
-	editorRef.value.innerHTML = '';
-	hasContent.value = false;
-};
-
-const updateMultiline = () => {
-	const el = editorRef.value;
-	if (!el) return;
-
-	const lineHeight = 24; // 和 CSS 保持一致
-	isMultiline.value = el.scrollHeight > lineHeight + 2;
 };
 </script>
 
@@ -271,10 +304,13 @@ const updateMultiline = () => {
 				</template>
 				<template v-else-if="message.type === 'ai'">
 					<!-- markdown 渲染 -->
-					<div
-						class="chat-msg-content markdown-style"
-						v-html="md.render(message.raw)"
-					></div>
+					<div class="chat-msg-content">
+						<div
+							class="streaming-rendered markdown-style"
+							v-html="message.rendered"
+						></div>
+						<div class="streaming-tail" v-text="message.tail"></div>
+					</div>
 				</template>
 				<template v-else>
 					<!-- 纯文本渲染 -->
@@ -287,11 +323,7 @@ const updateMultiline = () => {
 
 		<!-- 输入框 -->
 		<div class="chat-input-container">
-			<div
-				class="chat-input"
-				:class="{ focus: isFocus, disabled }"
-				@click.stop
-			>
+			<div class="chat-input" :class="{ focus: isFocus, disabled }" @click.stop>
 				<!-- 真实输入框 -->
 				<div
 					class="chat-input-editor grid-area-primary"
@@ -460,8 +492,7 @@ const updateMultiline = () => {
 		--input-shadow:
 			rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px,
 			rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px,
-			rgba(0, 0, 0, 0.1) 0px 4px 12px 0px,
-			rgba(255, 255, 255, 0.2) 0px 0px 1px 0px inset;
+			rgba(0, 0, 0, 0.1) 0px 4px 12px 0px, rgba(255, 255, 255, 0.2) 0px 0px 1px 0px inset;
 
 		--btn-bg-primary: transparent;
 		--btn-bg-primary-hover: rgba(255, 255, 255, 0.1);
@@ -479,9 +510,7 @@ const updateMultiline = () => {
 	display: flex;
 	flex-direction: column;
 	height: auto;
-	min-height: calc(
-		100% - var(--spacing) * 19 - var(--spacing) * 10
-	); /* 让输入框处于最下方 */
+	min-height: calc(100% - var(--spacing) * 19 - var(--spacing) * 10); /* 让输入框处于最下方 */
 	padding-top: calc(var(--spacing) * 10);
 	width: 100%;
 	background-color: transparent;
