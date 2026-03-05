@@ -4,6 +4,8 @@ import ArrowUp from '../icon/arrowUp.svg?component';
 import ArrowDown from '../icon/arrowDown.svg?component';
 import Plus from '../icon/plus.svg?component';
 import Stop from '../icon/stop.svg?component';
+import Copy from '../icon/copy.svg?component';
+import Checkmark from '../icon/checkmark.svg?component';
 
 // import hljs from 'highlight.js';
 import markdownit from 'markdown-it';
@@ -19,6 +21,10 @@ const md = markdownit({
 	quotes: '“”‘’'
 }).enable('table');
 
+// emit
+const emit = defineEmits(['focus', 'blur']);
+
+// provider model
 import deepseek from '../core/deepseek';
 import ollama from '../core/ollama';
 import { UUID } from '../core/utils';
@@ -81,11 +87,7 @@ const hasMessages = computed(() => messages.value.length > 0);
 const chatStreamRef = ref();
 const isStreaming = ref(false);
 
-// emit
-const emit = defineEmits(['focus', 'blur']);
-
 // helper functions for message
-// 判断是否安全渲染markdown
 const isSafeToFlush = (text) => {
 	// 双换行说明段落结束
 	if (text.includes('\n\n')) return true;
@@ -105,10 +107,11 @@ const isSafeToFlush = (text) => {
 	return false;
 };
 
+// 更新消息内容
 const updateMessageContent = (messageId, token) => {
 	const msg = messages.value.find((m) => m.id === messageId);
 	if (!msg) return;
-	// msg.raw += token;
+	msg.raw += token;
 	msg.tail += token;
 
 	// 判断是否安全渲染markdown
@@ -118,12 +121,14 @@ const updateMessageContent = (messageId, token) => {
 	}
 };
 
+// 更新消息状态
 const updateMessageStatus = (messageId, status) => {
 	const msg = messages.value.find((m) => m.id === messageId);
 	if (!msg) return;
 	msg.status = status;
 };
 
+// 结束消息渲染
 const endMessageRendering = (messageId) => {
 	const msg = messages.value.find((m) => m.id === messageId);
 	if (msg && msg.tail) {
@@ -195,16 +200,40 @@ const sendMessage = async (question = inputValue.value) => {
 	await chatStreamRef.value.start(question);
 };
 
+// 中断
 const stopStreaming = () => {
 	chatStreamRef.value.abort();
 };
 
+// 清空输入框
 const clear = () => {
 	inputValue.value = '';
 	editorRef.value.innerHTML = '';
 	hasContent.value = false;
 };
 
+// actions
+// copy
+const pressCopy = ref(false);
+const copyText = (text) => {
+	navigator.clipboard.writeText(text);
+	pressCopy.value = true;
+	setTimeout(() => {
+		pressCopy.value = false;
+	}, 2000);
+};
+
+// action list
+const actions = ref([
+	{
+		name: 'copy',
+		icon: () => (pressCopy.value ? Checkmark : Copy),
+		action: (text) => copyText(text),
+		disabled: false
+	}
+]);
+
+// 多行状态
 const updateMultilineStatus = () => {
 	const el = editorRef.value;
 	if (!el) return;
@@ -213,6 +242,7 @@ const updateMultilineStatus = () => {
 	isMultiline.value = el.scrollHeight > lineHeight + 2;
 };
 
+// 滚动到底部
 const scorllToBottom = () => {
 	// const el = document.querySelector('.chat-container');
 	const el = chatContainerRef.value;
@@ -336,6 +366,22 @@ const onCompositionEnd = (event) => {
 						{{ message.raw }}
 					</div>
 				</template>
+				<div class="action-wrapper">
+					<div class="action-container">
+						<template v-if="message.status === 'sent'">
+							<template v-for="action in actions">
+								<button
+									v-if="!action.disabled"
+									class="action-btn"
+									:aria-label="action.name"
+									@click="action.action(message.raw)"
+								>
+									<component :is="action.icon()" />
+								</button>
+							</template>
+						</template>
+					</div>
+				</div>
 			</div>
 		</div>
 
@@ -397,7 +443,7 @@ const onCompositionEnd = (event) => {
 <style scoped>
 /* 非主要功能 */
 .page-title {
-	color: var(--text-color);
+	color: var(--text-primary);
 	font-size: 24px;
 	position: absolute;
 	width: 100%;
@@ -410,7 +456,7 @@ const onCompositionEnd = (event) => {
 	position: fixed;
 	width: 100%;
 	transform: rotate(-90deg);
-	color: var(--text-color);
+	color: var(--text-primary);
 	top: var(--spacing);
 	left: var(--spacing);
 	border-radius: 50%;
@@ -424,7 +470,7 @@ const onCompositionEnd = (event) => {
 	font-weight: 400;
 	width: fit-content;
 	position: fixed;
-	color: var(--text-color);
+	color: var(--text-primary);
 	top: var(--spacing);
 	left: calc(var(--spacing) * 4 + 2.25rem);
 	background-color: transparent;
@@ -478,9 +524,19 @@ const onCompositionEnd = (event) => {
 	background-color: var(--bg-color);
 	color-scheme: light dark;
 
-	--bg-color: rgba(255, 255, 255, 1);
 	--spacing: 0.25rem;
-	--text-color: rgba(0, 0, 0, 1);
+
+	--bg-primary: #fff;
+	--bg-primary-inverted: #000;
+	--bg-secondary: #e8e8e8;
+	--bg-tertiary: #f3f3f3;
+	--bg-scrim: #0d0d0d80;
+
+	--text-primary: #0d0d0d;
+	--text-secondary: #5d5d5d;
+	--text-tertiary: #8f8f8f;
+	--text-inverted: #fff;
+
 	--placeholder-color: rgba(153, 153, 153, 1);
 
 	--input-bg: #fff;
@@ -506,7 +562,17 @@ const onCompositionEnd = (event) => {
 @media (prefers-color-scheme: dark) {
 	.chat-container {
 		--bg-color: rgba(33, 33, 33, 1);
-		--text-color: rgba(255, 255, 255, 1);
+		--bg-primary: #212121;
+		--bg-primary-inverted: #fff;
+		--bg-secondary: #303030;
+		--bg-tertiary: #414141;
+		--bg-scrim: #0d0d0d80;
+
+		--text-primary: #fff;
+		--text-secondary: #f3f3f3;
+		--text-tertiary: #afafaf;
+		--text-inverted: #0d0d0d;
+
 		--placeholder-color: rgba(153, 153, 153, 1);
 
 		--input-bg: #303030;
@@ -577,8 +643,81 @@ const onCompositionEnd = (event) => {
 	word-break: break-all;
 	overflow-wrap: break-word;
 	font-size: 16px;
-	color: var(--text-color);
+	color: var(--text-primary);
 	text-align: left;
+}
+
+/* action */
+.action-wrapper {
+	display: flex;
+	justify-content: flex-end;
+	position: relative;
+	z-index: 0;
+	background-color: transparent;
+}
+
+.chat-msg-user .action-wrapper {
+	justify-content: flex-end;
+}
+.chat-msg-ai .action-wrapper {
+	justify-content: flex-start;
+	transform: translateX(calc(var(--spacing) * -2));
+}
+
+.action-container {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 1rem; /* Tailwind 的 gap-y-4 大约 1rem */
+	padding: 0.25rem; /* p-1 */
+	user-select: none;
+	background-color: transparent;
+
+	/* 初始状态隐藏 */
+	opacity: 0;
+	pointer-events: none;
+
+	/* 过渡动画 */
+	transition: opacity 0.3s ease;
+
+	/* 兼容触摸设备 */
+	touch-action: auto;
+}
+
+.chat-msg:hover .action-container,
+.chat-msg:focus-within .action-container,
+.action-container[data-state='open'] {
+	opacity: 1;
+	pointer-events: auto;
+}
+/* 最后一项永远显示 */
+.chat-msg:last-child .action-container {
+	opacity: 1;
+	pointer-events: auto;
+}
+
+/* 按钮样式 */
+.action-btn {
+	color: var(--text-secondary);
+	background-color: transparent;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0.25rem; /* 可根据需要调整 */
+	cursor: pointer;
+	transition: background-color 0.2s;
+	border: transparent solid 1px;
+	width: 32px;
+	height: 32px;
+	border-radius: 0.5rem; /* rounded-lg */
+}
+
+.action-btn:active {
+	background-color: var(--bg-secondary);
+}
+
+.action-btn:hover {
+	background-color: var(--bg-secondary);
 }
 
 /* input-container */
@@ -588,7 +727,7 @@ const onCompositionEnd = (event) => {
 	padding-inline: calc(var(--spacing) * 5);
 	border: none;
 	background: transparent;
-	color: var(--text-color);
+	color: var(--text-primary);
 	cursor: text;
 	isolation: isolate;
 	position: sticky;
