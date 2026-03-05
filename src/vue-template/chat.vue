@@ -210,6 +210,7 @@ const clear = () => {
 	inputValue.value = '';
 	editorRef.value.innerHTML = '';
 	hasContent.value = false;
+	updateMultilineStatus();
 };
 
 // actions
@@ -235,11 +236,18 @@ const actions = ref([
 
 // 多行状态
 const updateMultilineStatus = () => {
-	const el = editorRef.value;
-	if (!el) return;
+	const editor = editorRef.value;
+	if (!editor) return;
 
 	const lineHeight = 24; // 和 CSS 保持一致
-	isMultiline.value = el.scrollHeight > lineHeight + 2;
+	const padding = 6; // 和 CSS 保持一致
+	const height = lineHeight + padding * 2 + 10;
+	if (editor.scrollHeight > height) {
+		isMultiline.value = true;
+	}
+	if (!hasContent.value) {
+		isMultiline.value = false;
+	}
 };
 
 // 滚动到底部
@@ -366,6 +374,7 @@ const onCompositionEnd = (event) => {
 						{{ message.raw }}
 					</div>
 				</template>
+				<!-- message下的操作按钮 -->
 				<div class="action-wrapper">
 					<div class="action-container">
 						<template v-if="message.status === 'sent'">
@@ -387,14 +396,18 @@ const onCompositionEnd = (event) => {
 
 		<!-- 输入框 -->
 		<div class="chat-input-container">
-			<div class="chat-input" :class="{ focus: isFocus, disabled }" @click.stop>
+			<div
+				class="chat-input"
+				:class="{ focus: isFocus, disabled, multiline: isMultiline }"
+				@click.stop
+			>
 				<!-- 真实输入框 -->
 				<div
+					ref="editorRef"
 					class="chat-input-editor grid-area-primary"
 					data-empty="true"
 					:contenteditable="!disabled"
 					:placeholder
-					ref="editorRef"
 					@input="handleInput"
 					@keydown="handleKeydown"
 					@focus="handleFocus"
@@ -431,6 +444,7 @@ const onCompositionEnd = (event) => {
 					@focus="isFocus = true"
 					@blur="isFocus = false"
 					disabled
+					style="display: none"
 				></textarea>
 			</div>
 			<button class="scroll-bottom-btn" @click="scorllToBottom">
@@ -551,8 +565,8 @@ const onCompositionEnd = (event) => {
 	--btn-icon-primary: #000;
 
 	--btn-bg-secondary: #000;
-	--btn-bg-secondary-hover: rgba(0, 0, 0, 1);
-	--btn-bg-secondary-active: rgba(0, 0, 0, 0.05);
+	--btn-bg-secondary-hover: #000;
+	--btn-bg-secondary-active: rgba(0, 0, 0, 0.4);
 	--btn-icon-secondary: #fff;
 
 	--user-chat-width: 70%;
@@ -790,7 +804,21 @@ const onCompositionEnd = (event) => {
 	grid-template-columns: auto 1fr auto;
 	/* 换行 */
 	grid-template-rows: auto auto auto;
+	transition:
+		grid-template-areas 0.2s ease,
+		grid-template-rows 0.2s ease,
+		padding 0.2s ease;
 }
+
+.chat-input.multiline {
+	grid-template-areas:
+		'header header header'
+		'primary primary primary'
+		'leading footer trailing';
+	grid-template-columns: auto 1fr auto;
+	grid-template-rows: auto auto auto;
+}
+
 .grid-area-header {
 	grid-area: header;
 }
@@ -812,7 +840,7 @@ const onCompositionEnd = (event) => {
 	padding-block: calc(var(--spacing) * 1.5);
 	padding-inline: calc(var(--spacing) * 2.5);
 	min-height: calc(var(--spacing) * 6);
-	max-height: calc(var(--spacing) * 49);
+	max-height: calc(var(--spacing) * 40); /* 49 */
 	/* scoll */
 	overflow-y: auto;
 	white-space: pre-wrap;
@@ -820,6 +848,9 @@ const onCompositionEnd = (event) => {
 	word-break: break-all;
 	overflow-wrap: break-word;
 	min-width: 0;
+	will-change: height;
+}
+.chat-input.multiline .chat-input-editor {
 }
 
 .chat-input.disabled {
