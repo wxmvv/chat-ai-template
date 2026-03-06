@@ -6,6 +6,9 @@ import Plus from '../icon/plus.svg?component';
 import Stop from '../icon/stop.svg?component';
 import Copy from '../icon/copy.svg?component';
 import Checkmark from '../icon/checkmark.svg?component';
+import Refresh from '../icon/refresh.svg?component';
+import Delete from '../icon/delete.svg?component';
+import Edit from '../icon/edit.svg?component';
 
 // import hljs from 'highlight.js';
 import markdownit from 'markdown-it';
@@ -215,12 +218,12 @@ const clear = () => {
 
 // actions
 // copy
-const pressCopy = ref(false);
-const copyText = (text) => {
+const copyingId = ref(null);
+const copyText = (text, id) => {
 	navigator.clipboard.writeText(text);
-	pressCopy.value = true;
+	copyingId.value = id;
 	setTimeout(() => {
-		pressCopy.value = false;
+		copyingId.value = null;
 	}, 2000);
 };
 
@@ -228,9 +231,23 @@ const copyText = (text) => {
 const actions = ref([
 	{
 		name: 'copy',
-		icon: () => (pressCopy.value ? Checkmark : Copy),
-		action: (text) => copyText(text),
-		disabled: false
+		icon: (message) => (copyingId.value === message.id ? Checkmark : Copy),
+		action: (message) => copyText(message.raw, message.id)
+	},
+	{
+		name: 'edit',
+		icon: () => Edit,
+		disabled: (message) => message.type === 'ai'
+	},
+	{
+		name: 'regenerate',
+		icon: () => Refresh,
+		disabled: (message) => message.type === 'user'
+	},
+	{
+		name: 'delete',
+		icon: () => Delete,
+		disabled: () => true
 	}
 ]);
 
@@ -380,12 +397,12 @@ const onCompositionEnd = (event) => {
 						<template v-if="message.status === 'sent'">
 							<template v-for="action in actions">
 								<button
-									v-if="!action.disabled"
+									v-if="!action.disabled || !action.disabled(message)"
 									class="action-btn"
 									:aria-label="action.name"
-									@click="action.action(message.raw)"
+									@click="action.action(message)"
 								>
-									<component :is="action.icon()" />
+									<component :is="action.icon(message)" />
 								</button>
 							</template>
 						</template>
@@ -682,7 +699,7 @@ const onCompositionEnd = (event) => {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: 1rem; /* Tailwind 的 gap-y-4 大约 1rem */
+	gap: 0;
 	padding: 0.25rem; /* p-1 */
 	user-select: none;
 	background-color: transparent;
