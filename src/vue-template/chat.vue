@@ -814,9 +814,9 @@ const onCompositionEnd = (event) => {
 /* toBottom */
 .scroll-bottom-btn {
 	position: absolute;
-	cursor-pointer: pointer;
+	/* cursor-pointer: pointer; */
 	z-index: 30;
-	bg-clip-padding: border;
+	/* bg-clip-padding: border; */
 	border-radius: 50%;
 	inset-inline-end: 50%;
 	padding: 0;
@@ -899,8 +899,8 @@ const onCompositionEnd = (event) => {
 	min-width: 0;
 	will-change: height;
 }
-.chat-input.multiline .chat-input-editor {
-}
+/* .chat-input.multiline .chat-input-editor {
+} */
 
 .chat-input.disabled {
 	opacity: 0.5;
