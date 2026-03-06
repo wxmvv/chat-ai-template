@@ -442,6 +442,8 @@ const onCompositionEnd = (event) => {
 				</div>
 			</div>
 		</div>
+		<!-- 底部占位 -->
+		<div v-if="messages.length" class="chat-msg-placeholder"></div>
 
 		<!-- 输入框 -->
 		<div class="chat-input-container">
@@ -571,6 +573,9 @@ const onCompositionEnd = (event) => {
 	border: none;
 	background-color: transparent;
 }
+.markdown-style :deep(p) {
+	margin-block: 4px;
+}
 
 .markdown-style :deep(ul) {
 	padding-left: 30px;
@@ -655,6 +660,10 @@ const onCompositionEnd = (event) => {
 		--btn-icon-secondary: #000;
 	}
 }
+.chat-msg-placeholder {
+	content: '';
+	height: 0;
+}
 
 .chat-msg-container {
 	display: flex;
@@ -674,6 +683,10 @@ const onCompositionEnd = (event) => {
 .chat-msg-ai {
 	background-color: transparent;
 }
+.chat-msg-ai:last-child {
+	padding-bottom: calc(var(--spacing) * 10);
+	min-height: 70vh;
+}
 .chat-msg-ai > .chat-msg-content {
 	background-color: transparent;
 }
@@ -687,7 +700,7 @@ const onCompositionEnd = (event) => {
 	align-items: flex-end;
 }
 .chat-msg-user > .chat-msg-content {
-	padding-block: calc(var(--spacing) * 3); /* multline 3 line 1.5 */
+	padding-block: calc(var(--spacing) * 1.5); /*TODO multline 3 line 1.5 */
 	padding-inline: calc(var(--spacing) * 4);
 	border-radius: 18px;
 	max-width: var(--user-chat-width, 70%);
@@ -724,7 +737,7 @@ const onCompositionEnd = (event) => {
 }
 .chat-msg-ai .action-wrapper {
 	justify-content: flex-start;
-	transform: translateX(calc(var(--spacing) * -2));
+	transform: translateX(calc(var(--spacing) * -1.5));
 }
 
 .action-container {
@@ -732,7 +745,8 @@ const onCompositionEnd = (event) => {
 	flex-wrap: wrap;
 	align-items: center;
 	gap: 0;
-	padding: 0.25rem; /* p-1 */
+	padding-inline: 0;
+	padding-block: 0;
 	user-select: none;
 	background-color: transparent;
 
