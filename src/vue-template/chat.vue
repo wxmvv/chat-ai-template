@@ -9,6 +9,11 @@ import Checkmark from '../icon/checkmark.svg?component';
 import Refresh from '../icon/refresh.svg?component';
 import Delete from '../icon/delete.svg?component';
 import Edit from '../icon/edit.svg?component';
+import Share from '../icon/share.svg?component';
+import Zan from '../icon/zan.svg?component';
+import Cai from '../icon/cai.svg?component';
+import Zan_fill from '../icon/zan_fill.svg?component';
+import Cai_fill from '../icon/cai_fill.svg?component';
 
 // import hljs from 'highlight.js';
 import markdownit from 'markdown-it';
@@ -227,6 +232,16 @@ const copyText = (text, id) => {
 	}, 2000);
 };
 
+// zan cai
+const zanCai = (message, type) => {
+	console.log('zanCai', message, type);
+	if (message.zanCai === type) {
+		message.zanCai = null;
+	} else {
+		message.zanCai = type;
+	}
+};
+
 // action list
 const actions = ref([
 	{
@@ -238,6 +253,23 @@ const actions = ref([
 		name: 'edit',
 		icon: () => Edit,
 		disabled: (message) => message.type === 'ai'
+	},
+	{
+		name: 'zan',
+		icon: (message) => (message.zanCai === 'zan' ? Zan_fill : Zan),
+		action: (message) => zanCai(message, 'zan'),
+		disabled: (message) => message.type === 'user' || message.zanCai === 'cai'
+	},
+	{
+		name: 'cai',
+		icon: (message) => (message.zanCai === 'cai' ? Cai_fill : Cai),
+		action: (message) => zanCai(message, 'cai'),
+		disabled: (message) => message.type === 'user' || message.zanCai === 'zan'
+	},
+	{
+		name: 'share',
+		icon: () => Share,
+		disabled: (message) => message.type === 'user'
 	},
 	{
 		name: 'regenerate',
@@ -400,7 +432,7 @@ const onCompositionEnd = (event) => {
 									v-if="!action.disabled || !action.disabled(message)"
 									class="action-btn"
 									:aria-label="action.name"
-									@click="action.action(message)"
+									@click="action.action && action.action(message)"
 								>
 									<component :is="action.icon(message)" />
 								</button>
