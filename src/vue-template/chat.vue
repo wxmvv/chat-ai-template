@@ -70,7 +70,7 @@ const providerList = [
 		desc: '深度求索！'
 	}
 ];
-const provider = ref(providerList[0]);
+const provider = ref(providerList[1]);
 const modelList = ref();
 const model = ref();
 const updateModelList = async (p) => {

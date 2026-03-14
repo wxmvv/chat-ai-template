@@ -1,7 +1,7 @@
 const DefaultHeaders = {
 	'Content-Type': 'application/json;charset=utf-8',
 	Accept: 'application/json',
-	Authorization: `Bearer your-api-key`
+	Authorization: `Bearer ${import.meta.env.VITE_DEEPSEEK_API_KEY}`
 };
 const DefaultAPI = 'https://api.deepseek.com/chat/completions';
 const DefaultModel = 'deepseek-chat';
