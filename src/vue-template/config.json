@@ -1,0 +1,24 @@
+{
+	"system": "You are a helpful assistant.",
+	"language": "zh-CN",
+	"temperature": 0.5,
+	"max_tokens": 4096,
+	"top_p": 1,
+	"memory": {
+		"type": "none"
+	},
+	"thinking": {
+		"type": "disabled"
+	},
+	"frequency_penalty": 0,
+	"presence_penalty": 0,
+	"response_format": {
+		"type": "text"
+	},
+	"stop": null,
+	"stream_options": null,
+	"top_logprobs": null,
+	"tools": null,
+	"tool_choice": "none",
+	"logprobs": false
+}
