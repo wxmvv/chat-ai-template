@@ -78,7 +78,6 @@ const updateModelList = async (p) => {
 	model.value = null;
 	try {
 		const res = await p.api.getModelList();
-		console.log('getModelList', res);
 		modelList.value = res.data;
 		model.value = modelList.value[0] || null;
 	} catch (err) {
@@ -793,7 +792,6 @@ const restartAutoScroll = () => {
 };
 
 const scrollToBottom = async () => {
-	// const el = document.querySelector('.chat-container');
 	await nextTick();
 	const el = chatContainerRef.value;
 	if (!el) return;
@@ -802,7 +800,6 @@ const scrollToBottom = async () => {
 };
 
 const scrollToBottomSmooth = async () => {
-	// const el = document.querySelector('.chat-container');
 	await nextTick();
 	const el = chatContainerRef.value;
 	if (!el) return;
@@ -907,305 +904,314 @@ const onCompositionEnd = (e) => {
 
 <template>
 	<!-- 输入框 -->
-	<div
-		class="chat-container"
-		ref="chatContainerRef"
-		@scroll="handleScroll"
-		@wheel="handleWheel"
-		@touchstart="handleTouchStart"
-		@touchend="handleTouchEnd"
-		@touchmove="handleTouchMove"
-		@click="handlePageClick"
-	>
-		<!-- 顶部导航 -->
-		<div class="chat-nav" :class="{ top: isAtTop }">
-			<div class="chat-nav-left">
-				<!-- 打开侧边栏 -->
-				<button
-					class="icon-btn hoverable page-back"
-					@click="showSidebar"
-					style="transform: rotate(0deg)"
-				>
-					<Sidebar class="icon" />
-				</button>
-				<!-- 返回首页 -->
-				<button v-if="showBack" class="icon-btn hoverable page-back" @click="goBack">
-					<ArrowUp class="icon" />
-				</button>
-				<!-- 切换提供商 -->
-				<div class="dropdown" :class="{ show: isShowProviderSwitcherDropdown }">
+	<div class="chat-ai-template">
+		<div
+			class="chat-container"
+			ref="chatContainerRef"
+			@scroll="handleScroll"
+			@wheel="handleWheel"
+			@touchstart="handleTouchStart"
+			@touchend="handleTouchEnd"
+			@touchmove="handleTouchMove"
+			@click="handlePageClick"
+		>
+			<!-- 顶部导航 -->
+			<div class="chat-nav" :class="{ top: isAtTop }">
+				<div class="chat-nav-left">
+					<!-- 打开侧边栏 -->
 					<button
-						class="model-switcher-btn dropdown-btn hoverable"
-						@click="toggleProviderSwitcherDropdown"
+						class="icon-btn hoverable page-back"
+						@click="showSidebar"
+						style="transform: rotate(0deg)"
 					>
-						<div>{{ provider?.name || 'Select Provider' }}</div>
-						<ChevronDown width="16" height="16" />
+						<Sidebar class="icon" />
 					</button>
-
-					<div class="dropdown-menu">
-						<template v-if="providerList && providerList.length > 0">
-							<template v-for="pl in providerList" :key="pl">
-								<label class="menu-item hoverable">
-									<input
-										type="radio"
-										name="provider"
-										v-model="provider"
-										:value="pl"
-									/>
-									<div class="menu-left">
-										<component :is="pl.icon()" class="icon-l" />
-										<div>
-											<div class="menu-item-title">{{ pl.name }}</div>
-											<div class="menu-item-desc">{{ pl.desc }}</div>
-										</div>
-									</div>
-									<div class="checkmark">
-										<Checkmark />
-									</div>
-								</label>
-							</template>
-						</template>
-					</div>
-				</div>
-				<!-- 切换模型 -->
-				<div class="dropdown" :class="{ show: isShowModelSwitchDropdown }">
-					<button
-						class="model-switcher-btn dropdown-btn hoverable"
-						@click="toggleModelSwitcherDropdown"
-					>
-						<div>{{ model?.id || 'Select Model' }}</div>
-						<ChevronDown width="16" height="16" />
+					<!-- 返回首页 -->
+					<button v-if="showBack" class="icon-btn hoverable page-back" @click="goBack">
+						<ArrowUp class="icon" />
 					</button>
+					<!-- 切换提供商 -->
+					<div class="dropdown" :class="{ show: isShowProviderSwitcherDropdown }">
+						<button
+							class="model-switcher-btn dropdown-btn hoverable"
+							@click="toggleProviderSwitcherDropdown"
+						>
+							<div class="dropdown-btn-text">
+								{{ provider?.name || 'Select Provider' }}
+							</div>
+							<ChevronDown style="transform: translateY(3px)" />
+						</button>
 
-					<div class="dropdown-menu">
-						<template v-if="modelList && modelList.length > 0">
-							<template v-for="ml in modelList" :key="ml">
-								<label class="menu-item hoverable">
-									<input type="radio" name="model" v-model="model" :value="ml" />
-									<div class="menu-left">
-										<component :is="Star" class="icon-l" />
-										<div>
-											<div class="menu-item-title">{{ ml.id }}</div>
-										</div>
-									</div>
-									<div class="checkmark">
-										<Checkmark />
-									</div>
-								</label>
-							</template>
-						</template>
-					</div>
-				</div>
-				<!-- 更多 -->
-			</div>
-			<div class="chat-nav-right">
-				<div
-					class="dropdown dropdown-right"
-					:class="{ show: isShowConversationActionsDropdown }"
-				>
-					<button
-						class="model-switcher-btn dropdown-btn hoverable"
-						@click="toggleConversationActionsDropdown"
-					>
-						<More />
-					</button>
-
-					<div class="dropdown-menu">
-						<template v-if="conversationActions && conversationActions.length > 0">
-							<template v-for="ca in conversationActions" :key="ca">
-								<label
-									v-if="!ca.disabled"
-									class="menu-item hoverable"
-									@click="ca.action && ca.action($event)"
-								>
-									<div class="menu-left">
-										<component :is="ca.icon()" />
-										<div class="menu-item-title">{{ ca.name }}</div>
-									</div>
-									<div class="checkmark">
-										<Checkmark />
-									</div>
-								</label>
-							</template>
-						</template>
-					</div>
-				</div>
-			</div>
-		</div>
-		<!-- 对话 -->
-		<div class="chat-msg-container">
-			<!-- 中间标题 -->
-			<div v-if="!hasMessages" class="page-title-container">{{ pageTitle }}</div>
-
-			<!-- 消息列表 -->
-			<div
-				class="chat-msg"
-				v-for="message in messageList"
-				:key="message.id"
-				:class="{
-					'chat-msg-assistant': message.role === 'assistant',
-					'chat-msg-user': message.role === 'user'
-				}"
-			>
-				<template v-if="message.thinkingRaw && message.thinkingRaw !== ''">
-					<template v-if="message.thinking">thinking...</template>
-					<div
-						v-if="message.thinkingRaw"
-						class="chat-msg-content chat-msg-thinking"
-						@click="toggleFoldThinking(message.id)"
-					>
-						<span>&lt;Thinking&gt;</span>
-						<span style="display: inline" v-if="message.foldThinking">...</span>
-						<div
-							v-else
-							class="streaming-rendered markdown-style"
-							v-html="message.thinkingRaw"
-						></div>
-						<span>&lt;/Thinking&gt;</span>
-					</div>
-				</template>
-				<template v-if="message.role === 'user'">
-					<!-- 纯文本渲染 -->
-					<div class="chat-msg-content">
-						{{ message.raw }}
-					</div>
-				</template>
-				<template v-else-if="message.role === 'assistant'">
-					<!-- markdown 渲染 -->
-					<div class="chat-msg-content">
-						<div
-							class="streaming-rendered markdown-style"
-							v-html="message.rendered"
-						></div>
-						<div class="streaming-tail" v-text="message.tail"></div>
-					</div>
-				</template>
-				<template v-else>
-					<!-- 纯文本渲染 -->
-					<div class="chat-msg-content">
-						{{ message.raw }}
-					</div>
-				</template>
-				<!-- message下的操作按钮 -->
-				<div class="action-wrapper">
-					<div class="action-container">
-						<template v-if="message.status === 'sent'">
-							<template v-for="action in messageActions">
-								<button
-									v-if="!action.disabled || !action.disabled(message)"
-									class="action-btn"
-									:aria-label="action.name"
-									@click="action.action && action.action(message)"
-								>
-									<component :is="action.icon(message)" />
-								</button>
-							</template>
-						</template>
-					</div>
-				</div>
-			</div>
-		</div>
-		<!-- 底部占位 -->
-		<!-- <div ref="bottomAnchorRef" v-if="messages.length" class="bottom-anchor"></div> -->
-
-		<!-- 输入框 -->
-		<div class="chat-input-container">
-			<div
-				class="chat-input"
-				:class="{ focus: isFocus, disabled, multiline: isMultiline }"
-				@click.stop
-			>
-				<!-- 真实输入框 -->
-				<div
-					ref="editorRef"
-					class="chat-input-editor grid-area-primary"
-					data-empty="true"
-					:contenteditable="!disabled"
-					:placeholder
-					@input="handleInput"
-					@keydown="handleKeydown"
-					@focus="handleFocus"
-					@blur="handleBlur"
-					@compositionstart="onCompositionStart"
-					@compositionend="onCompositionEnd"
-					:spellcheck="false"
-					role="textbox"
-				></div>
-
-				<!-- Composer Actions -->
-				<div
-					class="dropdown dropup-right grid-area-leading"
-					:class="{ show: isShowComposerActionsDropdown }"
-				>
-					<button
-						class="icon-btn primary grid-area-leading dropdown-btn hoverable"
-						@click="toggleComposerActionsDropdown"
-						aria-label="send prompt"
-						type="button"
-					>
-						<Plus class="icon" />
-					</button>
-					<div class="dropdown-menu">
-						<template v-if="composerActions && composerActions.length > 0">
-							<template v-for="ca in composerActions" :key="ca">
-								<template v-if="ca.type && ca.type === 'separator'">
-									<div class="menu-separator"></div>
-								</template>
-								<template v-else>
-									<label
-										class="menu-item hoverable"
-										@click="ca.action && ca.action($event)"
-										v-if="!ca.disabled"
-									>
-										<template v-if="ca.key && ca.key !== ''">
-											<input
-												type="checkbox"
-												name="ca.name"
-												v-model="chatState[ca.key]"
-											/>
-										</template>
+						<div class="dropdown-menu">
+							<template v-if="providerList && providerList.length > 0">
+								<template v-for="pl in providerList" :key="pl">
+									<label class="menu-item hoverable">
+										<input
+											type="radio"
+											name="provider"
+											v-model="provider"
+											:value="pl"
+										/>
 										<div class="menu-left">
-											<component v-if="ca.icon" :is="ca.icon()" />
-											<div class="menu-item-title">{{ ca.name }}</div>
+											<component :is="pl.icon()" class="icon-l" />
+											<div>
+												<div class="menu-item-title">{{ pl.name }}</div>
+												<div class="menu-item-desc">{{ pl.desc }}</div>
+											</div>
 										</div>
-										<div class="checkmark checkcolor">
+										<div class="checkmark">
 											<Checkmark />
 										</div>
 									</label>
 								</template>
 							</template>
-						</template>
+						</div>
+					</div>
+					<!-- 切换模型 -->
+					<div class="dropdown" :class="{ show: isShowModelSwitchDropdown }">
+						<button
+							class="model-switcher-btn dropdown-btn hoverable"
+							@click="toggleModelSwitcherDropdown"
+						>
+							<div class="dropdown-btn-text">{{ model?.id || 'Select Model' }}</div>
+							<ChevronDown style="transform: translateY(3px)" />
+						</button>
+
+						<div class="dropdown-menu">
+							<template v-if="modelList && modelList.length > 0">
+								<template v-for="ml in modelList" :key="ml">
+									<label class="menu-item hoverable">
+										<input
+											type="radio"
+											name="model"
+											v-model="model"
+											:value="ml"
+										/>
+										<div class="menu-left">
+											<component :is="Star" class="icon-l" />
+											<div>
+												<div class="menu-item-title">{{ ml.id }}</div>
+											</div>
+										</div>
+										<div class="checkmark">
+											<Checkmark />
+										</div>
+									</label>
+								</template>
+							</template>
+						</div>
 					</div>
 				</div>
+				<div class="chat-nav-right">
+					<!-- 更多 -->
+					<div
+						class="dropdown dropdown-right"
+						:class="{ show: isShowConversationActionsDropdown }"
+					>
+						<button
+							class="model-switcher-btn dropdown-btn hoverable"
+							@click="toggleConversationActionsDropdown"
+						>
+							<More />
+						</button>
 
-				<!-- 发送按钮 -->
-				<button
-					class="icon-btn hoverable secondary grid-area-trailing"
-					type="button"
-					aria-label="send prompt"
-					@click="isStreaming ? stopStreaming() : buildMessageStream()"
-				>
-					<template v-if="isStreaming"><Stop class="icon" /></template>
-					<template v-else><ArrowUp class="icon" /></template>
-				</button>
-
-				<!-- 隐藏的文本框 目前未使用 可以使用做兼容处理 -->
-				<textarea
-					class="hidden-textarea"
-					id="hidden-textarea"
-					disabled
-					style="display: none"
-				></textarea>
+						<div class="dropdown-menu">
+							<template v-if="conversationActions && conversationActions.length > 0">
+								<template v-for="ca in conversationActions" :key="ca">
+									<label
+										v-if="!ca.disabled"
+										class="menu-item hoverable"
+										@click="ca.action && ca.action($event)"
+									>
+										<div class="menu-left">
+											<component :is="ca.icon()" />
+											<div class="menu-item-title">{{ ca.name }}</div>
+										</div>
+										<div class="checkmark">
+											<Checkmark />
+										</div>
+									</label>
+								</template>
+							</template>
+						</div>
+					</div>
+				</div>
 			</div>
-			<!-- 滚动到底部按钮 -->
-			<button
-				class="scroll-bottom-btn"
-				:style="{ opacity: showScrollButton ? '1' : '0' }"
-				:disabled="!showScrollButton"
-				@click="scrollToBottomSmooth"
-			>
-				<ArrowDown />
-			</button>
+			<!-- 对话 -->
+			<div class="chat-msg-container">
+				<!-- 中间标题 -->
+				<div v-if="!hasMessages" class="page-title-container">{{ pageTitle }}</div>
+
+				<!-- 消息列表 -->
+				<div
+					class="chat-msg"
+					v-for="message in messageList"
+					:key="message.id"
+					:class="{
+						'chat-msg-assistant': message.role === 'assistant',
+						'chat-msg-user': message.role === 'user'
+					}"
+				>
+					<template v-if="message.thinkingRaw && message.thinkingRaw !== ''">
+						<template v-if="message.thinking">thinking...</template>
+						<div
+							v-if="message.thinkingRaw"
+							class="chat-msg-content chat-msg-thinking"
+							@click="toggleFoldThinking(message.id)"
+						>
+							<span>&lt;Thinking&gt;</span>
+							<span style="display: inline" v-if="message.foldThinking">...</span>
+							<div
+								v-else
+								class="streaming-rendered markdown-style"
+								v-html="message.thinkingRaw"
+							></div>
+							<span>&lt;/Thinking&gt;</span>
+						</div>
+					</template>
+					<template v-if="message.role === 'user'">
+						<!-- 纯文本渲染 -->
+						<div class="chat-msg-content">
+							{{ message.raw }}
+						</div>
+					</template>
+					<template v-else-if="message.role === 'assistant'">
+						<!-- markdown 渲染 -->
+						<div class="chat-msg-content">
+							<div
+								class="streaming-rendered markdown-style"
+								v-html="message.rendered"
+							></div>
+							<div class="streaming-tail" v-text="message.tail"></div>
+						</div>
+					</template>
+					<template v-else>
+						<!-- 纯文本渲染 -->
+						<div class="chat-msg-content">
+							{{ message.raw }}
+						</div>
+					</template>
+					<!-- message下的操作按钮 -->
+					<div class="action-wrapper">
+						<div class="action-container">
+							<template v-if="message.status === 'sent'">
+								<template v-for="action in messageActions">
+									<button
+										v-if="!action.disabled || !action.disabled(message)"
+										class="action-btn"
+										:aria-label="action.name"
+										@click="action.action && action.action(message)"
+									>
+										<component :is="action.icon(message)" />
+									</button>
+								</template>
+							</template>
+						</div>
+					</div>
+				</div>
+			</div>
+			<!-- 底部占位 -->
+			<!-- <div ref="bottomAnchorRef" v-if="messages.length" class="bottom-anchor"></div> -->
+
+			<!-- 输入框 -->
+			<div class="chat-input-container">
+				<div
+					class="chat-input"
+					:class="{ focus: isFocus, disabled, multiline: isMultiline }"
+					@click.stop
+				>
+					<!-- 真实输入框 -->
+					<div
+						ref="editorRef"
+						class="chat-input-editor grid-area-primary"
+						data-empty="true"
+						:contenteditable="!disabled"
+						:placeholder
+						@input="handleInput"
+						@keydown="handleKeydown"
+						@focus="handleFocus"
+						@blur="handleBlur"
+						@compositionstart="onCompositionStart"
+						@compositionend="onCompositionEnd"
+						:spellcheck="false"
+						role="textbox"
+					></div>
+
+					<!-- Composer Actions -->
+					<div
+						class="dropdown dropup-right grid-area-leading"
+						:class="{ show: isShowComposerActionsDropdown }"
+					>
+						<button
+							class="icon-btn primary grid-area-leading dropdown-btn hoverable"
+							@click="toggleComposerActionsDropdown"
+							aria-label="send prompt"
+							type="button"
+						>
+							<Plus class="icon" />
+						</button>
+						<div class="dropdown-menu">
+							<template v-if="composerActions && composerActions.length > 0">
+								<template v-for="ca in composerActions" :key="ca">
+									<template v-if="ca.type && ca.type === 'separator'">
+										<div class="menu-separator"></div>
+									</template>
+									<template v-else>
+										<label
+											class="menu-item hoverable"
+											@click="ca.action && ca.action($event)"
+											v-if="!ca.disabled"
+										>
+											<template v-if="ca.key && ca.key !== ''">
+												<input
+													type="checkbox"
+													name="ca.name"
+													v-model="chatState[ca.key]"
+												/>
+											</template>
+											<div class="menu-left">
+												<component v-if="ca.icon" :is="ca.icon()" />
+												<div class="menu-item-title">{{ ca.name }}</div>
+											</div>
+											<div class="checkmark checkcolor">
+												<Checkmark />
+											</div>
+										</label>
+									</template>
+								</template>
+							</template>
+						</div>
+					</div>
+
+					<!-- 发送按钮 -->
+					<button
+						class="icon-btn hoverable secondary grid-area-trailing"
+						type="button"
+						aria-label="send prompt"
+						@click="isStreaming ? stopStreaming() : buildMessageStream()"
+					>
+						<template v-if="isStreaming"><Stop class="icon" /></template>
+						<template v-else><ArrowUp class="icon" /></template>
+					</button>
+
+					<!-- 隐藏的文本框 目前未使用 可以使用做兼容处理 -->
+					<textarea
+						class="hidden-textarea"
+						id="hidden-textarea"
+						disabled
+						style="display: none"
+					></textarea>
+				</div>
+				<!-- 滚动到底部按钮 -->
+				<button
+					class="scroll-bottom-btn"
+					:style="{ opacity: showScrollButton ? '1' : '0' }"
+					:disabled="!showScrollButton"
+					@click="scrollToBottomSmooth"
+				>
+					<ArrowDown />
+				</button>
+			</div>
 		</div>
 		<!-- sidebar -->
 		<div class="sidebar" :class="{ show: isShowSidebar }">
@@ -1281,11 +1287,11 @@ svg {
 }
 
 /* 主要 */
-.chat-container * {
+.chat-ai-template * {
 	box-sizing: border-box;
 }
 
-.chat-container {
+.chat-ai-template {
 	--white: #fff;
 	--black: #000;
 	--gray-0: #fff;
@@ -1315,17 +1321,18 @@ svg {
 	--gray-1000: #0b0b0b;
 	--brand-purple: #ab68ff;
 }
-.chat-container {
+.chat-ai-template {
 	-webkit-overflow-scrolling: touch;
 	height: 100%;
 	position: relative;
 	overflow-y: auto;
-	background-color: var(--bg-primary);
+	background-color: transparent;
 	color-scheme: light dark;
 	display: flex;
-	flex-direction: column;
+	flex-direction: row;
 
 	--spacing: 0.25rem;
+	--sidebar-width: 260px;
 	--header-height: calc(var(--spacing) * 13);
 	--menu-item-height: calc(var(--spacing) * 9);
 	--text-xs: 0.75rem;
@@ -1449,7 +1456,7 @@ svg {
 
 /* 暗色模式 */
 @media (prefers-color-scheme: dark) {
-	.chat-container {
+	.chat-ai-template {
 		--bg-primary: #212121;
 		--bg-primary-inverted: #fff;
 		--bg-secondary: #303030;
@@ -1530,6 +1537,18 @@ svg {
 	}
 }
 
+.chat-container {
+	-webkit-overflow-scrolling: touch;
+	height: 100%;
+	width: 100%;
+	position: relative;
+	overflow-y: auto;
+	background-color: var(--bg-primary);
+	color-scheme: light dark;
+	display: flex;
+	flex-direction: column;
+}
+
 /* 空白页面标题 */
 .page-title-container {
 	color: var(--text-primary);
@@ -1552,7 +1571,7 @@ svg {
 	/* background-color: pink; */
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
+	justify-content: flex-start;
 	box-shadow: 0 1px 0 var(--border-sharp); /* 在最顶部没有shadow 到下方才出现shadow */
 	backdrop-filter: blur(10px);
 	z-index: 40;
@@ -1570,26 +1589,14 @@ svg {
 .chat-nav-right {
 	display: flex;
 	flex-direction: row;
+	position: absolute;
+	right: calc(var(--spacing) * 2);
+	top: calc(var(--spacing) * 2);
 }
 
 .dropdown {
 	position: relative;
 	display: inline-block;
-}
-
-.model-switcher-btn {
-	/*   font-normal whitespace-nowrap focus-visible:outline-none */
-	display: flex;
-	cursor: pointer;
-	align-items: center;
-	justify-content: center;
-	gap: calc(var(--spacing) * 1);
-	border-radius: var(--radius-lg);
-	min-height: calc(var(--spacing) * 9);
-	padding-inline: calc(var(--spacing) * 2.5);
-	padding-block: calc(var(--spacing) * 1.5);
-	font-size: 18px;
-	white-space: nowrap;
 }
 
 .dropdown-menu {
@@ -1617,6 +1624,31 @@ svg {
 	right: auto;
 	bottom: calc(var(--spacing) * 10.5);
 	top: auto;
+}
+
+.dropdown-btn {
+	display: flex;
+}
+.dropdown-btn-text {
+	/* 超出部分省略 */
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.model-switcher-btn {
+	/*   font-normal whitespace-nowrap focus-visible:outline-none */
+	display: flex;
+	cursor: pointer;
+	align-items: center;
+	justify-content: center;
+	gap: calc(var(--spacing) * 1);
+	border-radius: var(--radius-lg);
+	min-height: calc(var(--spacing) * 9);
+	padding-inline: calc(var(--spacing) * 2.5);
+	padding-block: calc(var(--spacing) * 1.5);
+	font-size: 18px;
+	max-width: 140px;
+	white-space: nowrap;
 }
 
 .menu-item {
@@ -1965,8 +1997,8 @@ svg {
 .sidebar {
 	position: fixed;
 	top: 0;
-	left: -50%;
-	width: 50%;
+	left: calc(-1 * var(--sidebar-width));
+	width: var(--sidebar-width);
 	height: 100%;
 	background-color: var(--sidebar-surface-primary);
 	z-index: 100;
