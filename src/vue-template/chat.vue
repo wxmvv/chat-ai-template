@@ -759,6 +759,7 @@ const startEditingConversationTitle = (id) => {
 	editingConversationId.value = id;
 	newTitle.value = conversations.value.get(id)?.title;
 };
+
 const finishEditingConversationTitle = () => {
 	retitleConversation(editingConversationId.value, newTitle.value);
 	editingConversationId.value = null;
@@ -1046,8 +1047,106 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-	<!-- 输入框 -->
+	<!-- container -->
 	<div class="chat-ai-template" id="chat-ai-template">
+		<!-- sidebar -->
+		<div class="sidebar" :class="{ show: isShowSidebar }">
+			<div class="sidebar-header">
+				<button
+					class="sidebar-header-left icon-btn hoverable"
+					@click="(hideSidebar(), createConversation())"
+				>
+					<OllamaHello class="icon" />
+				</button>
+				<button class="sidebar-header-right icon-btn hoverable" @click="hideSidebar">
+					<SidebarLeft class="icon" />
+				</button>
+			</div>
+			<div class="sidebar-actions">
+				<button class="sidebar-menu-item hoverable" @click="createConversation">
+					<NewConversation />
+					新聊天
+				</button>
+			</div>
+			<div class="sidebar-body">
+				<div class="history-list">
+					<a
+						v-for="cid in conversationIds"
+						class="sidebar-menu-item hoverable"
+						:class="{ current: conversationId === cid }"
+						@click="switchConversation(cid)"
+					>
+						<div
+							style="
+								display: flex;
+								flex-direction: column;
+								align-items: start;
+								z-index: 100;
+							"
+						>
+							<div
+								v-if="editingConversationId !== cid"
+								@dblclick="startEditingConversationTitle(cid)"
+							>
+								title: {{ conversations.get(cid)?.title }}
+							</div>
+							<input
+								v-else
+								v-model="newTitle"
+								autofocus="true"
+								@blur="finishEditingConversationTitle"
+								@keyup.enter="finishEditingConversationTitle"
+								@keyup.esc="cancelEditingConversationTitle"
+							/>
+
+							<div>id:{{ cid }}</div>
+						</div>
+
+						<!-- DOING 对话列表按钮 -->
+						<div class="dropdown">
+							<button
+								:id="`conversation-sidebar-dropdown-${cid}-btn`"
+								class="dropdown-btn icon-btn-small hoverable-icon icon"
+								@click="
+									toggleDropdown(`conversation-sidebar-dropdown-${cid}`, $event)
+								"
+							>
+								<More />
+							</button>
+
+							<div
+								:id="`conversation-sidebar-dropdown-${cid}-menu`"
+								class="dropdown-menu"
+							>
+								<template
+									v-if="conversationActions && conversationActions.length > 0"
+								>
+									<template v-for="ca in conversationActions" :key="ca">
+										<template v-if="!ca.disabledOnSidebar">
+											<label
+												v-if="!ca.disabled"
+												class="menu-item hoverable"
+												@click.stop="ca.action && ca.action(cid)"
+											>
+												<div class="menu-left">
+													<component :is="ca.icon()" />
+													<div class="menu-item-title">{{ ca.name }}</div>
+												</div>
+												<div class="checkmark">
+													<Checkmark />
+												</div>
+											</label>
+										</template>
+									</template>
+								</template>
+							</div>
+						</div>
+					</a>
+				</div>
+			</div>
+			<!-- <div class="sidebar-footer">你的账号</div> -->
+		</div>
+		<!-- 主界面 -->
 		<div
 			class="chat-container"
 			ref="chatContainerRef"
@@ -1251,103 +1350,6 @@ onBeforeUnmount(() => {
 					<ArrowDown />
 				</button>
 			</div>
-		</div>
-		<!-- sidebar -->
-		<div class="sidebar" :class="{ show: isShowSidebar }">
-			<div class="sidebar-header">
-				<button
-					class="sidebar-header-left icon-btn hoverable"
-					@click="(hideSidebar(), createConversation())"
-				>
-					<OllamaHello class="icon" />
-				</button>
-				<button class="sidebar-header-right icon-btn hoverable" @click="hideSidebar">
-					<SidebarLeft class="icon" />
-				</button>
-			</div>
-			<div class="sidebar-actions">
-				<button class="sidebar-menu-item hoverable" @click="createConversation">
-					<NewConversation />
-					新聊天
-				</button>
-			</div>
-			<div class="sidebar-body">
-				<div class="history-list">
-					<a
-						v-for="cid in conversationIds"
-						class="sidebar-menu-item hoverable"
-						:class="{ current: conversationId === cid }"
-						@click="switchConversation(cid)"
-					>
-						<div
-							style="
-								display: flex;
-								flex-direction: column;
-								align-items: start;
-								z-index: 100;
-							"
-						>
-							<div
-								v-if="editingConversationId !== cid"
-								@dblclick="startEditingConversationTitle(cid)"
-							>
-								title: {{ conversations.get(cid)?.title }}
-							</div>
-							<input
-								v-else
-								v-model="newTitle"
-								@blur="finishEditingConversationTitle"
-								@keyup.enter="finishEditingConversationTitle"
-								@keyup.esc="cancelEditingConversationTitle"
-								style="width: 200px"
-							/>
-
-							<div>id:{{ cid }}</div>
-						</div>
-
-						<!-- DOING 对话列表按钮 -->
-						<div class="dropdown">
-							<button
-								:id="`conversation-sidebar-dropdown-${cid}-btn`"
-								class="dropdown-btn icon-btn-small hoverable-icon icon"
-								@click="
-									toggleDropdown(`conversation-sidebar-dropdown-${cid}`, $event)
-								"
-							>
-								<More />
-							</button>
-
-							<div
-								:id="`conversation-sidebar-dropdown-${cid}-menu`"
-								class="dropdown-menu"
-							>
-								<template
-									v-if="conversationActions && conversationActions.length > 0"
-								>
-									<template v-for="ca in conversationActions" :key="ca">
-										<template v-if="!ca.disabledOnSidebar">
-											<label
-												v-if="!ca.disabled"
-												class="menu-item hoverable"
-												@click.stop="ca.action && ca.action(cid)"
-											>
-												<div class="menu-left">
-													<component :is="ca.icon()" />
-													<div class="menu-item-title">{{ ca.name }}</div>
-												</div>
-												<div class="checkmark">
-													<Checkmark />
-												</div>
-											</label>
-										</template>
-									</template>
-								</template>
-							</div>
-						</div>
-					</a>
-				</div>
-			</div>
-			<!-- <div class="sidebar-footer">你的账号</div> -->
 		</div>
 		<!-- modal -->
 		<div class="modal" v-if="isShowSidebar" @click.stop="hideSidebar"></div>
@@ -1725,11 +1727,128 @@ svg {
 		--scrollbar-color-hover: #fff3;
 	}
 }
+/* sidebar */
+.sidebar {
+	/* position: fixed; */
+	position: relative;
+	top: 0;
+	left: calc(-1 * var(--sidebar-width));
+	width: 0;
+	opacity: 0;
+	height: 100%;
+	background-color: var(--sidebar-surface-primary);
+	z-index: 100;
+	display: flex;
+	flex-direction: column;
+	/* 需要一个弹簧动画 */
+	transition:
+		left 0.4s ease-in-out,
+		width 0.4s ease-in-out,
+		opacity 0.1s ease-in-out;
+}
+.sidebar.show {
+	display: flex;
+	left: 0;
+	opacity: 1;
+	width: var(--sidebar-width);
+}
 
+.sidebar-header {
+	padding-inline: calc(var(--spacing) * 2);
+	color: var(--text-primary);
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	position: sticky;
+	top: 0;
+	width: 100%;
+	height: var(--header-height);
+	background-color: transparent;
+}
+
+.sidebar-actions {
+	padding: calc(var(--spacing) * 2);
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 2);
+
+	position: sticky;
+	top: var(--header-height);
+	background-color: transparent;
+}
+
+.sidebar-body {
+	flex: 1;
+	overflow-y: auto;
+	padding: calc(var(--spacing) * 2);
+	background-color: transparent;
+}
+
+.sidebar-footer {
+	padding: calc(var(--spacing) * 2);
+	border-top: 1px solid var(--border-sharp);
+	text-align: right;
+	background-color: transparent;
+}
+
+.history-list {
+	display: flex;
+	flex-direction: column;
+	gap: calc(var(--spacing) * 2);
+	color: var(--text-primary);
+}
+.history-list .current {
+	background-color: var(--menu-item-active);
+}
+
+/* item */
+.sidebar-menu-item {
+	border: none;
+	background-color: transparent;
+	outline: none;
+	cursor: pointer;
+
+	gap: calc(var(--spacing) * 1.5);
+	width: 100%;
+	max-width: calc(100% - 3 * var(--spacing));
+	/* height: var(--menu-item-height); */
+
+	margin-inline: calc(var(--spacing) * 1.5);
+	padding-inline: calc(var(--spacing) * 2.5);
+	padding-block: calc(var(--spacing) * 1.5);
+	font-size: var(--text-sm);
+	line-height: var(--text-sm--line-height);
+	-webkit-user-select: none;
+	user-select: none;
+	border-radius: 10px;
+	align-items: center;
+
+	display: flex;
+	position: relative;
+}
+.history-list .sidebar-menu-item {
+	justify-content: space-between;
+	align-items: center;
+}
+
+.sidebar-menu-item-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+.sidebar-menu-item-text {
+	display: flex;
+	flex-grow: 1;
+	align-items: center;
+	gap: calc(var(--spacing) * 2.5);
+}
+
+/* 主界面 */
 .chat-container {
 	-webkit-overflow-scrolling: touch;
 	height: 100%;
-	width: 100%;
+	flex: 1;
 	position: relative;
 	overflow-y: auto;
 	background-color: var(--bg-primary);
@@ -2182,115 +2301,6 @@ svg {
 	display: flex;
 }
 
-.sidebar {
-	position: fixed;
-	top: 0;
-	left: calc(-1 * var(--sidebar-width));
-	width: var(--sidebar-width);
-	height: 100%;
-	background-color: var(--sidebar-surface-primary);
-	z-index: 100;
-	display: flex;
-	flex-direction: column;
-	/* 需要一个弹簧动画 */
-	transition: left 0.3s ease-in-out;
-}
-.sidebar.show {
-	display: flex;
-	left: 0;
-}
-
-.sidebar-header {
-	padding-inline: calc(var(--spacing) * 2);
-	color: var(--text-primary);
-	display: flex;
-	flex-direction: row;
-	justify-content: space-between;
-	align-items: center;
-	position: sticky;
-	top: 0;
-	width: 100%;
-	height: var(--header-height);
-	background-color: transparent;
-}
-
-.sidebar-actions {
-	padding: calc(var(--spacing) * 2);
-	display: flex;
-	flex-direction: column;
-	gap: calc(var(--spacing) * 2);
-
-	position: sticky;
-	top: var(--header-height);
-	background-color: transparent;
-}
-
-.sidebar-body {
-	flex: 1;
-	overflow-y: auto;
-	padding: calc(var(--spacing) * 2);
-	background-color: transparent;
-}
-
-.sidebar-footer {
-	padding: calc(var(--spacing) * 2);
-	border-top: 1px solid var(--border-sharp);
-	text-align: right;
-	background-color: transparent;
-}
-
-.history-list {
-	display: flex;
-	flex-direction: column;
-	gap: calc(var(--spacing) * 2);
-	color: var(--text-primary);
-}
-.history-list .current {
-	background-color: var(--menu-item-active);
-}
-
-/* item */
-.sidebar-menu-item {
-	border: none;
-	background-color: transparent;
-	outline: none;
-	cursor: pointer;
-
-	gap: calc(var(--spacing) * 1.5);
-	width: 100%;
-	max-width: calc(100% - 3 * var(--spacing));
-	/* height: var(--menu-item-height); */
-
-	margin-inline: calc(var(--spacing) * 1.5);
-	padding-inline: calc(var(--spacing) * 2.5);
-	padding-block: calc(var(--spacing) * 1.5);
-	font-size: var(--text-sm);
-	line-height: var(--text-sm--line-height);
-	-webkit-user-select: none;
-	user-select: none;
-	border-radius: 10px;
-	align-items: center;
-
-	display: flex;
-	position: relative;
-}
-.history-list .sidebar-menu-item {
-	justify-content: space-between;
-	align-items: center;
-}
-
-.sidebar-menu-item-icon {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-}
-.sidebar-menu-item-text {
-	display: flex;
-	flex-grow: 1;
-	align-items: center;
-	gap: calc(var(--spacing) * 2.5);
-}
-
 /* 通用按钮 */
 .hoverable:hover {
 	background-color: var(--menu-item-highlighted);
@@ -2387,12 +2397,18 @@ svg {
 	height: 100%;
 	background-color: rgba(0, 0, 0, 0.5);
 	z-index: 99;
-	display: flex;
+	display: none;
 	justify-content: center;
 	align-items: center;
 }
 
 /* 640px 适配 */
-@media (max-width: 640px) {
+@media (max-width: 768px) {
+	.sidebar {
+		position: fixed;
+	}
+	.modal {
+		display: flex;
+	}
 }
 </style>
