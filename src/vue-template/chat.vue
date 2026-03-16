@@ -341,6 +341,7 @@ const deleteConversation = (id) => {
 	if (!conversations.value.has(id)) return;
 
 	conversations.value.delete(id);
+	conversationIds.value.splice(conversationIds.value.indexOf(id), 1);
 };
 
 const togglePinConversation = (id) => {
@@ -814,6 +815,7 @@ const conversationActions = ref([
 	{
 		name: '删除对话',
 		icon: () => Delete,
+		actionStyle: 'action-warning',
 		action: (id) => {
 			deleteConversation(id);
 			closeAllDropdown();
@@ -1185,6 +1187,7 @@ onBeforeUnmount(() => {
 												v-if="!ca.disabled"
 												class="menu-item hoverable"
 												@click.stop="ca.action && ca.action(cid)"
+												:class="ca.actionStyle"
 											>
 												<div class="menu-left">
 													<component :is="ca.icon()" />
@@ -1342,7 +1345,6 @@ onBeforeUnmount(() => {
 			</div>
 			<!-- 底部占位 -->
 			<!-- <div ref="bottomAnchorRef" v-if="messages.length" class="bottom-anchor"></div> -->
-
 			<!-- 输入框 -->
 			<div class="chat-input-container">
 				<div
@@ -1415,7 +1417,7 @@ onBeforeUnmount(() => {
 		<div id="provider-dropdown-menu" class="dropdown-menu">
 			<template v-if="providerList && providerList.length > 0">
 				<template v-for="pl in providerList" :key="pl">
-					<label class="menu-item hoverable" @click.stop>
+					<label class="menu-item hoverable" @click.stop :class="pl.actionStyle">
 						<input type="radio" name="provider" v-model="provider" :value="pl" />
 						<div class="menu-left">
 							<component :is="pl.icon()" class="icon-l" />
@@ -1434,7 +1436,7 @@ onBeforeUnmount(() => {
 		<div id="model-dropdown-menu" class="dropdown-menu">
 			<template v-if="modelList && modelList.length > 0">
 				<template v-for="ml in modelList" :key="ml">
-					<label class="menu-item hoverable" @click.stop>
+					<label class="menu-item hoverable" @click.stop :class="ml.actionStyle">
 						<input type="radio" name="model" v-model="model" :value="ml" />
 						<div class="menu-left">
 							<component :is="Star" class="icon-l" />
@@ -1457,6 +1459,7 @@ onBeforeUnmount(() => {
 							v-if="!ca.disabled"
 							class="menu-item hoverable"
 							@click.stop="ca.action && ca.action(conversationId)"
+							:class="ca.actionStyle"
 						>
 							<div class="menu-left">
 								<component :is="ca.icon()" />
@@ -1481,6 +1484,7 @@ onBeforeUnmount(() => {
 							class="menu-item hoverable"
 							@click.stop="ca.action && ca.action($event)"
 							v-if="!ca.disabled"
+							:class="ca.actionStyle"
 						>
 							<template v-if="ca.key && ca.key !== ''">
 								<input type="checkbox" name="ca.name" v-model="chatState[ca.key]" />
@@ -1804,6 +1808,9 @@ svg {
 }
 .hoverable:hover .hoverhidden {
 	display: none;
+}
+.action-warning * {
+	color: var(--text-error);
 }
 
 .icon-btn-small {
@@ -2159,7 +2166,6 @@ svg {
 	display: flex;
 	align-items: center;
 	gap: calc(var(--spacing) * 1);
-	color: var(--text-primary);
 	font-size: 14px;
 }
 
