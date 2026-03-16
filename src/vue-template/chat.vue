@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, nextTick } from 'vue';
+import { ref, computed, watch, nextTick, onMounted, onBeforeMount, onBeforeUnmount } from 'vue';
 import ArrowUp from '../icon/arrowUp.svg?component';
 import ArrowDown from '../icon/arrowDown.svg?component';
 import Plus from '../icon/plus.svg?component';
@@ -96,53 +96,140 @@ watch(
 );
 
 // dropdown menu
-const isShowModelSwitchDropdown = ref(false);
-const isShowProviderSwitcherDropdown = ref(false);
-const isShowConversationActionsDropdown = ref(false);
-const isShowComposerActionsDropdown = ref(false);
+const dropdownRegistry = new Map();
+const DropdownMenuGap = 4; // btn 和 menu 的间距
 
-const toggleProviderSwitcherDropdown = (e) => {
-	e.stopPropagation();
-	if (isShowProviderSwitcherDropdown.value)
-		isShowProviderSwitcherDropdown.value = !isShowProviderSwitcherDropdown.value;
-	else {
-		closeAllDropdown();
-		isShowProviderSwitcherDropdown.value = !isShowProviderSwitcherDropdown.value;
-	}
+const openDropdown = (key, btnId = key + '-btn', menuId = key + '-menu') => {
+	const btnEl = document.getElementById(btnId);
+	const menuEl = document.getElementById(menuId);
+	if (!btnEl || !menuEl) return;
+
+	const rect = btnEl.getBoundingClientRect();
+
+	// open
+	const placeholder = document.createComment('dropdown');
+
+	menuEl.parentNode.insertBefore(placeholder, menuEl);
+	menuEl.style.display = 'block';
+	menuEl.style.visibility = 'hidden';
+	menuEl.style.position = 'fixed';
+
+	const pageEl = document.getElementById('chat-ai-template');
+	pageEl.appendChild(menuEl);
+
+	const menuWidth = menuEl.offsetWidth;
+	const menuHeight = menuEl.offsetHeight;
+	const { left, top } = checkPosition(rect, menuWidth, menuHeight);
+
+	Object.assign(menuEl.style, {
+		position: 'fixed',
+		left: left + 'px',
+		top: top + 'px',
+		zIndex: 9999,
+		display: 'block',
+		visibility: 'visible'
+	});
+
+	dropdownRegistry.set(key, { btnEl, menuEl, placeholder });
 };
-const toggleModelSwitcherDropdown = (e) => {
-	e.stopPropagation();
-	if (isShowModelSwitchDropdown.value)
-		isShowModelSwitchDropdown.value = !isShowModelSwitchDropdown.value;
-	else {
-		closeAllDropdown();
-		isShowModelSwitchDropdown.value = !isShowModelSwitchDropdown.value;
+
+// 边界检测
+const checkPosition = (rect, width, height) => {
+	let left = rect.left;
+	let top = rect.bottom + DropdownMenuGap;
+
+	// 右边界
+	if (left + width > window.innerWidth) {
+		left = rect.right - width;
 	}
-};
-const toggleConversationActionsDropdown = (e) => {
-	e.stopPropagation();
-	if (isShowConversationActionsDropdown.value)
-		isShowConversationActionsDropdown.value = !isShowConversationActionsDropdown.value;
-	else {
-		closeAllDropdown();
-		isShowConversationActionsDropdown.value = !isShowConversationActionsDropdown.value;
+
+	// 下边界
+	if (top + height > window.innerHeight) {
+		top = rect.top - height - DropdownMenuGap;
 	}
+
+	// 左边界
+	if (left < 0) {
+		left = 10;
+	}
+
+	// 上边界
+	if (top < 0) {
+		top = 10;
+	}
+
+	return { left, top };
 };
-const toggleComposerActionsDropdown = (e) => {
-	e.stopPropagation();
-	if (isShowComposerActionsDropdown.value)
-		isShowComposerActionsDropdown.value = !isShowComposerActionsDropdown.value;
-	else {
+
+const updatePosition = (key, btnId = key + '-btn', menuId = key + '-menu') => {
+	const btnEl = document.getElementById(btnId);
+	const menuEl = document.getElementById(menuId);
+	if (!btnEl || !menuEl) return;
+
+	const rect = btnRef.value.getBoundingClientRect();
+
+	const menuWidth = menuEl.offsetWidth;
+	const menuHeight = menuEl.offsetHeight;
+	const { left, top } = checkPosition(rect, menuWidth, menuHeight);
+
+	style.value = {
+		position: 'fixed',
+		left: left + 'px',
+		top: top + 'px',
+		zIndex: 9999
+	};
+};
+
+const closeDropdown = (key) => {
+	console.log('closeDropdown', key);
+
+	const item = dropdownRegistry.get(key);
+	if (!item) return;
+
+	const { menuEl, placeholder } = item;
+
+	if (placeholder && placeholder.parentNode) {
+		placeholder.parentNode.insertBefore(menuEl, placeholder);
+		placeholder.remove();
+	}
+
+	Object.assign(menuEl.style, {
+		position: 'fixed',
+		display: 'none'
+	});
+
+	dropdownRegistry.delete(key);
+};
+
+const moveDropdown = (key) => {
+	const item = dropdownRegistry.get(key);
+	if (!item) return;
+
+	const { btnEl, menuEl } = item;
+	const rect = btnEl.getBoundingClientRect();
+
+	Object.assign(menuEl.style, {
+		position: 'fixed',
+		left: rect.left + 'px',
+		top: rect.bottom + 'px',
+		zIndex: 9999
+	});
+};
+
+const toggleDropdown = (key, e) => {
+	e.stopPropagation(); // 阻止冒泡
+	if (dropdownRegistry.has(key)) {
+		closeDropdown(key);
+	} else {
 		closeAllDropdown();
-		isShowComposerActionsDropdown.value = !isShowComposerActionsDropdown.value;
+		openDropdown(key);
 	}
 };
 
 const closeAllDropdown = () => {
-	isShowModelSwitchDropdown.value = false;
-	isShowProviderSwitcherDropdown.value = false;
-	isShowConversationActionsDropdown.value = false;
-	isShowComposerActionsDropdown.value = false;
+	dropdownRegistry.forEach((_, key) => {
+		closeDropdown(key);
+	});
 };
 
 // sidebar
@@ -151,6 +238,7 @@ const showSidebar = () => {
 	isShowSidebar.value = true;
 };
 const hideSidebar = () => {
+	closeAllDropdown();
 	isShowSidebar.value = false;
 };
 
@@ -211,6 +299,8 @@ const createConversation = () => {
 	conversations.value.set(id, conv);
 	conversationIds.value.push(id);
 	conversationMessages.value.set(id, []);
+
+	showScrollButton.value = false;
 	conversationId.value = id;
 
 	return id;
@@ -219,6 +309,7 @@ const createConversation = () => {
 const switchConversation = (id) => {
 	if (!conversations.value.has(id)) return;
 
+	showScrollButton.value = false;
 	conversationId.value = id;
 };
 
@@ -314,7 +405,7 @@ const downloadConversation = (convId) => {
 	downloadJSON('conversation.json', json);
 };
 
-const downloadAllCoversations = () => {
+const downloadAllConversations = () => {
 	const json = exportAllConversations();
 	downloadJSON('conversations.json', json);
 };
@@ -664,24 +755,43 @@ const regenerateMessage = (message) => {
 // action list
 const conversationActions = ref([
 	{
+		name: '重命名对话',
+		icon: () => Edit,
+		action: (id) => {
+			retitleConversation(id, '你好你好');
+			closeAllDropdown();
+		},
+		disabledOnNavbar: true
+	},
+	{
 		name: '导出当前对话JSON',
 		icon: () => Share,
-		action: () => downloadConversation(conversationId.value)
+		action: (id) => {
+			downloadConversation(id);
+			closeAllDropdown();
+		},
+		disabledOnNavbar: false
 	},
 	{
 		name: '导出全部对话JSON',
 		icon: () => Share,
-		action: () => downloadAllCoversations()
+		action: () => {
+			downloadAllConversations();
+			closeAllDropdown();
+		},
+		disabledOnSidebar: true
 	},
 	{
 		name: '导入文件',
 		icon: () => Share,
-		action: () => importFile()
+		action: () => importFile(),
+		disabledOnSidebar: true
 	},
 	{
 		name: '恢复对话JSON',
 		icon: () => Share,
-		action: () => restoreBackup()
+		action: () => restoreBackup(),
+		disabledOnSidebar: true
 	}
 ]);
 
@@ -831,9 +941,16 @@ const handleScroll = (e) => {
 	isAtTop.value = scrollTop < 30; // 判断是否在顶部
 	isAtBottom = checkIfAtBottom(scrollTop, clientHeight, scrollHeight); // 判断是否在底部
 	showScrollButton.value = !isAtBottom;
+
+	dropdownRegistry.forEach((_, key) => {
+		moveDropdown(key);
+	});
 };
 
 // handler
+const handleResize = (e) => {
+	console.log('handleResize', e);
+};
 const handleWheel = (e) => {
 	userScrolling = true;
 	autoScroll.value = false; // 用户滚动时则关闭自动滚动
@@ -900,11 +1017,21 @@ const onCompositionEnd = (e) => {
 	// console.log('onCompositionEnd', e);
 	isComposing = false;
 };
+
+// 生命周期
+onMounted(() => {
+	window.addEventListener('resize', handleResize);
+	document.addEventListener('click', handlePageClick);
+});
+onBeforeUnmount(() => {
+	window.removeEventListener('resize', handleResize);
+	document.removeEventListener('click', handlePageClick);
+});
 </script>
 
 <template>
 	<!-- 输入框 -->
-	<div class="chat-ai-template">
+	<div class="chat-ai-template" id="chat-ai-template">
 		<div
 			class="chat-container"
 			ref="chatContainerRef"
@@ -913,7 +1040,6 @@ const onCompositionEnd = (e) => {
 			@touchstart="handleTouchStart"
 			@touchend="handleTouchEnd"
 			@touchmove="handleTouchMove"
-			@click="handlePageClick"
 		>
 			<!-- 顶部导航 -->
 			<div class="chat-nav" :class="{ top: isAtTop }">
@@ -931,109 +1057,40 @@ const onCompositionEnd = (e) => {
 						<ArrowUp class="icon" />
 					</button>
 					<!-- 切换提供商 -->
-					<div class="dropdown" :class="{ show: isShowProviderSwitcherDropdown }">
+					<div class="dropdown">
 						<button
+							id="provider-dropdown-btn"
 							class="model-switcher-btn dropdown-btn hoverable"
-							@click="toggleProviderSwitcherDropdown"
+							@click="toggleDropdown('provider-dropdown', $event)"
 						>
 							<div class="dropdown-btn-text">
 								{{ provider?.name || 'Select Provider' }}
 							</div>
 							<ChevronDown style="transform: translateY(3px)" />
 						</button>
-
-						<div class="dropdown-menu">
-							<template v-if="providerList && providerList.length > 0">
-								<template v-for="pl in providerList" :key="pl">
-									<label class="menu-item hoverable">
-										<input
-											type="radio"
-											name="provider"
-											v-model="provider"
-											:value="pl"
-										/>
-										<div class="menu-left">
-											<component :is="pl.icon()" class="icon-l" />
-											<div>
-												<div class="menu-item-title">{{ pl.name }}</div>
-												<div class="menu-item-desc">{{ pl.desc }}</div>
-											</div>
-										</div>
-										<div class="checkmark">
-											<Checkmark />
-										</div>
-									</label>
-								</template>
-							</template>
-						</div>
 					</div>
 					<!-- 切换模型 -->
-					<div class="dropdown" :class="{ show: isShowModelSwitchDropdown }">
+					<div class="dropdown">
 						<button
+							id="model-dropdown-btn"
 							class="model-switcher-btn dropdown-btn hoverable"
-							@click="toggleModelSwitcherDropdown"
+							@click="toggleDropdown('model-dropdown', $event)"
 						>
 							<div class="dropdown-btn-text">{{ model?.id || 'Select Model' }}</div>
 							<ChevronDown style="transform: translateY(3px)" />
 						</button>
-
-						<div class="dropdown-menu">
-							<template v-if="modelList && modelList.length > 0">
-								<template v-for="ml in modelList" :key="ml">
-									<label class="menu-item hoverable">
-										<input
-											type="radio"
-											name="model"
-											v-model="model"
-											:value="ml"
-										/>
-										<div class="menu-left">
-											<component :is="Star" class="icon-l" />
-											<div>
-												<div class="menu-item-title">{{ ml.id }}</div>
-											</div>
-										</div>
-										<div class="checkmark">
-											<Checkmark />
-										</div>
-									</label>
-								</template>
-							</template>
-						</div>
 					</div>
 				</div>
 				<div class="chat-nav-right">
 					<!-- 更多 -->
-					<div
-						class="dropdown dropdown-right"
-						:class="{ show: isShowConversationActionsDropdown }"
-					>
+					<div class="dropdown dropdown-right">
 						<button
+							id="conversation-navbar-dropdown-btn"
 							class="model-switcher-btn dropdown-btn hoverable"
-							@click="toggleConversationActionsDropdown"
+							@click="toggleDropdown('conversation-navbar-dropdown', $event)"
 						>
 							<More />
 						</button>
-
-						<div class="dropdown-menu">
-							<template v-if="conversationActions && conversationActions.length > 0">
-								<template v-for="ca in conversationActions" :key="ca">
-									<label
-										v-if="!ca.disabled"
-										class="menu-item hoverable"
-										@click="ca.action && ca.action($event)"
-									>
-										<div class="menu-left">
-											<component :is="ca.icon()" />
-											<div class="menu-item-title">{{ ca.name }}</div>
-										</div>
-										<div class="checkmark">
-											<Checkmark />
-										</div>
-									</label>
-								</template>
-							</template>
-						</div>
 					</div>
 				</div>
 			</div>
@@ -1138,49 +1195,15 @@ const onCompositionEnd = (e) => {
 					></div>
 
 					<!-- Composer Actions -->
-					<div
-						class="dropdown dropup-right grid-area-leading"
-						:class="{ show: isShowComposerActionsDropdown }"
-					>
+					<div id="composer-dropdown-btn" class="dropdown dropup-right grid-area-leading">
 						<button
 							class="icon-btn primary grid-area-leading dropdown-btn hoverable"
-							@click="toggleComposerActionsDropdown"
+							@click="toggleDropdown('composer-dropdown', $event)"
 							aria-label="send prompt"
 							type="button"
 						>
 							<Plus class="icon" />
 						</button>
-						<div class="dropdown-menu">
-							<template v-if="composerActions && composerActions.length > 0">
-								<template v-for="ca in composerActions" :key="ca">
-									<template v-if="ca.type && ca.type === 'separator'">
-										<div class="menu-separator"></div>
-									</template>
-									<template v-else>
-										<label
-											class="menu-item hoverable"
-											@click="ca.action && ca.action($event)"
-											v-if="!ca.disabled"
-										>
-											<template v-if="ca.key && ca.key !== ''">
-												<input
-													type="checkbox"
-													name="ca.name"
-													v-model="chatState[ca.key]"
-												/>
-											</template>
-											<div class="menu-left">
-												<component v-if="ca.icon" :is="ca.icon()" />
-												<div class="menu-item-title">{{ ca.name }}</div>
-											</div>
-											<div class="checkmark checkcolor">
-												<Checkmark />
-											</div>
-										</label>
-									</template>
-								</template>
-							</template>
-						</div>
 					</div>
 
 					<!-- 发送按钮 -->
@@ -1235,13 +1258,55 @@ const onCompositionEnd = (e) => {
 			<div class="sidebar-body">
 				<div class="history-list">
 					<a
-						v-for="id in conversationIds"
+						v-for="cid in conversationIds"
 						class="sidebar-menu-item hoverable"
-						:class="{ current: conversationId === id }"
-						@click="switchConversation(id)"
+						:class="{ current: conversationId === cid }"
+						@click="switchConversation(cid)"
 					>
-						title:{{ conversations.get(id)?.title }} id:{{ id }}
-						<button class="icon-btn-small hoverable-icon icon"><More /></button>
+						<div style="display: flex; flex-direction: column; align-items: start">
+							<div>title:{{ conversations.get(cid)?.title }}</div>
+							<div>id:{{ cid }}</div>
+						</div>
+
+						<!-- DOING 对话列表按钮 -->
+						<div class="dropdown">
+							<button
+								:id="`conversation-sidebar-dropdown-${cid}-btn`"
+								class="dropdown-btn icon-btn-small hoverable-icon icon"
+								@click="
+									toggleDropdown(`conversation-sidebar-dropdown-${cid}`, $event)
+								"
+							>
+								<More />
+							</button>
+
+							<div
+								:id="`conversation-sidebar-dropdown-${cid}-menu`"
+								class="dropdown-menu"
+							>
+								<template
+									v-if="conversationActions && conversationActions.length > 0"
+								>
+									<template v-for="ca in conversationActions" :key="ca">
+										<template v-if="!ca.disabledOnSidebar">
+											<label
+												v-if="!ca.disabled"
+												class="menu-item hoverable"
+												@click.stop="ca.action && ca.action(cid)"
+											>
+												<div class="menu-left">
+													<component :is="ca.icon()" />
+													<div class="menu-item-title">{{ ca.name }}</div>
+												</div>
+												<div class="checkmark">
+													<Checkmark />
+												</div>
+											</label>
+										</template>
+									</template>
+								</template>
+							</div>
+						</div>
 					</a>
 				</div>
 			</div>
@@ -1249,6 +1314,92 @@ const onCompositionEnd = (e) => {
 		</div>
 		<!-- modal -->
 		<div class="modal" v-if="isShowSidebar" @click.stop="hideSidebar"></div>
+		<!-- dropdown -->
+		<div id="provider-dropdown-menu" class="dropdown-menu">
+			<template v-if="providerList && providerList.length > 0">
+				<template v-for="pl in providerList" :key="pl">
+					<label class="menu-item hoverable" @click.stop>
+						<input type="radio" name="provider" v-model="provider" :value="pl" />
+						<div class="menu-left">
+							<component :is="pl.icon()" class="icon-l" />
+							<div>
+								<div class="menu-item-title">{{ pl.name }}</div>
+								<div class="menu-item-desc">{{ pl.desc }}</div>
+							</div>
+						</div>
+						<div class="checkmark">
+							<Checkmark />
+						</div>
+					</label>
+				</template>
+			</template>
+		</div>
+		<div id="model-dropdown-menu" class="dropdown-menu">
+			<template v-if="modelList && modelList.length > 0">
+				<template v-for="ml in modelList" :key="ml">
+					<label class="menu-item hoverable" @click.stop>
+						<input type="radio" name="model" v-model="model" :value="ml" />
+						<div class="menu-left">
+							<component :is="Star" class="icon-l" />
+							<div>
+								<div class="menu-item-title">{{ ml.id }}</div>
+							</div>
+						</div>
+						<div class="checkmark">
+							<Checkmark />
+						</div>
+					</label>
+				</template>
+			</template>
+		</div>
+		<div id="conversation-navbar-dropdown-menu" class="dropdown-menu">
+			<template v-if="conversationActions && conversationActions.length > 0">
+				<template v-for="ca in conversationActions" :key="ca">
+					<template v-if="!ca.disabledOnNavbar">
+						<label
+							v-if="!ca.disabled"
+							class="menu-item hoverable"
+							@click.stop="ca.action && ca.action(conversationId)"
+						>
+							<div class="menu-left">
+								<component :is="ca.icon()" />
+								<div class="menu-item-title">{{ ca.name }}</div>
+							</div>
+							<div class="checkmark">
+								<Checkmark />
+							</div>
+						</label>
+					</template>
+				</template>
+			</template>
+		</div>
+		<div id="composer-dropdown-menu" class="dropdown-menu">
+			<template v-if="composerActions && composerActions.length > 0">
+				<template v-for="ca in composerActions" :key="ca">
+					<template v-if="ca.type && ca.type === 'separator'">
+						<div class="menu-separator"></div>
+					</template>
+					<template v-else>
+						<label
+							class="menu-item hoverable"
+							@click.stop="ca.action && ca.action($event)"
+							v-if="!ca.disabled"
+						>
+							<template v-if="ca.key && ca.key !== ''">
+								<input type="checkbox" name="ca.name" v-model="chatState[ca.key]" />
+							</template>
+							<div class="menu-left">
+								<component v-if="ca.icon" :is="ca.icon()" />
+								<div class="menu-item-title">{{ ca.name }}</div>
+							</div>
+							<div class="checkmark checkcolor">
+								<Checkmark />
+							</div>
+						</label>
+					</template>
+				</template>
+			</template>
+		</div>
 	</div>
 </template>
 
@@ -1321,6 +1472,7 @@ svg {
 	--gray-1000: #0b0b0b;
 	--brand-purple: #ab68ff;
 }
+
 .chat-ai-template {
 	-webkit-overflow-scrolling: touch;
 	height: 100%;
@@ -1600,9 +1752,7 @@ svg {
 }
 
 .dropdown-menu {
-	position: absolute;
-	top: calc(var(--spacing) * 10.5);
-	left: 0;
+	position: fixed;
 	width: 260px;
 
 	background: var(--main-surface-primary);
@@ -1610,8 +1760,9 @@ svg {
 	box-shadow: 0 10px 20px rgba(0, 0, 0, 0.08);
 	padding: 6px 6px;
 	display: none;
+	z-index: 10;
 }
-.dropdown.show .dropdown-menu {
+/* .dropdown.show .dropdown-menu {
 	display: block;
 }
 
@@ -1624,7 +1775,7 @@ svg {
 	right: auto;
 	bottom: calc(var(--spacing) * 10.5);
 	top: auto;
-}
+} */
 
 .dropdown-btn {
 	display: flex;
@@ -1885,7 +2036,7 @@ svg {
 .scroll-bottom-btn {
 	position: absolute;
 	cursor: pointer;
-	z-index: 30;
+	z-index: 1;
 	background-clip: padding-box;
 	border-radius: 50%;
 	inset-inline-end: 50%;
