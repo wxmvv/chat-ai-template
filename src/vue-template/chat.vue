@@ -26,6 +26,8 @@ import Websearch from '../icon/websearch.svg?component';
 import Pic from '../icon/pic.svg?component';
 import FileSvg from '../icon/file.svg?component';
 import Think from '../icon/think.svg?component';
+import Pin from '../icon/pin.svg?component';
+import Pin_fill from '../icon/pin_fill.svg?component';
 
 // import hljs from 'highlight.js';
 import markdownit from 'markdown-it';
@@ -47,7 +49,7 @@ const emit = defineEmits(['focus', 'blur']);
 // provider model
 import deepseek from '../core/deepseek';
 import ollama from '../core/ollama';
-import { UUID } from '../core/utils';
+import { UUID, downloadJSON, formatTime, importFile } from '../core/utils';
 
 const pageTitle = ref('vue-chat-ai-demo');
 const showBack = ref(true);
@@ -288,6 +290,21 @@ const autoScroll = ref(true);
 const bottomAnchorRef = ref(null);
 
 // conversation
+const sortedConversationIds = computed(() => {
+	return [...conversationIds.value].sort((a, b) => {
+		const ca = conversations.value.get(a);
+		const cb = conversations.value.get(b);
+
+		if (ca?.pinned && !cb?.pinned) return -1;
+		if (!ca?.pinned && cb?.pinned) return 1;
+
+		const ta = ca?.updated_time || ca?.created_time;
+		const tb = cb?.updated_time || cb?.created_time;
+
+		return tb - ta;
+	});
+});
+
 const createConversation = () => {
 	const id = UUID();
 	const conv = {
@@ -320,17 +337,29 @@ const retitleConversation = (id, title) => {
 	conversations.value.set(id, { ...conversations.value.get(id), title });
 };
 
-const downloadJSON = (fileName, json) => {
-	const blob = new Blob([json], { type: 'application/json' });
-	const url = URL.createObjectURL(blob);
+const deleteConversation = (id) => {
+	if (!conversations.value.has(id)) return;
 
-	const a = document.createElement('a');
+	conversations.value.delete(id);
+};
 
-	a.href = url;
-	a.download = fileName;
+const togglePinConversation = (id) => {
+	if (!conversations.value.has(id)) return;
 
-	a.click();
-	URL.revokeObjectURL(url);
+	const conv = conversations.value.get(id);
+	conv.pinned = !conv.pinned;
+	conversations.value.set(id, conv);
+};
+
+const updateConversationTime = (id) => {
+	if (!conversations.value.has(id)) return;
+
+	const conv = conversations.value.get(id);
+
+	conversations.value.set(id, {
+		...conv,
+		updated_time: Date.now()
+	});
 };
 
 const importConversation = (json) => {
@@ -435,16 +464,6 @@ const restoreBackup = (json) => {
 
 		conversationMessages.value.set(conv.id, ids);
 	});
-};
-
-const importFile = (file) => {
-	const reader = new FileReader();
-
-	reader.onload = (e) => {
-		importConversation(e.target.result);
-	};
-
-	reader.readAsText(file);
 };
 
 // message functions
@@ -601,6 +620,8 @@ const AddUserMessage = (question) => {
 		updated_time: null
 	};
 
+	updateConversationTime(conversationId.value);
+
 	addMessage(userMessage);
 
 	return userMessageId;
@@ -627,6 +648,8 @@ const AddAssistantMessage = (userQuestionId, extraPayload = {}, index) => {
 		updated_time: null,
 		...extraPayload
 	};
+
+	updateConversationTime(conversationId.value);
 
 	addMessage(assistantMessage, index);
 	return assistantMessageId;
@@ -772,6 +795,14 @@ const cancelEditingConversationTitle = () => {
 // action list
 const conversationActions = ref([
 	{
+		name: '置顶/取消置顶对话',
+		icon: () => Pin,
+		action: (id) => {
+			togglePinConversation(id);
+			closeAllDropdown();
+		}
+	},
+	{
 		name: '重命名对话',
 		icon: () => Edit,
 		action: (id) => {
@@ -779,6 +810,14 @@ const conversationActions = ref([
 			closeAllDropdown();
 		},
 		disabledOnNavbar: true
+	},
+	{
+		name: '删除对话',
+		icon: () => Delete,
+		action: (id) => {
+			deleteConversation(id);
+			closeAllDropdown();
+		}
 	},
 	{
 		name: '导出当前对话JSON',
@@ -1071,7 +1110,7 @@ onBeforeUnmount(() => {
 			<div class="sidebar-body">
 				<div class="history-list">
 					<a
-						v-for="cid in conversationIds"
+						v-for="cid in sortedConversationIds"
 						class="sidebar-menu-item hoverable"
 						:class="{ current: conversationId === cid }"
 						@click="switchConversation(cid)"
@@ -1100,10 +1139,29 @@ onBeforeUnmount(() => {
 							/>
 
 							<div>id:{{ cid }}</div>
+							<div>
+								created_time:{{ formatTime(conversations.get(cid)?.created_time) }}
+							</div>
+							<div>
+								updated_time:{{ formatTime(conversations.get(cid)?.updated_time) }}
+							</div>
 						</div>
 
-						<!-- DOING 对话列表按钮 -->
+						<!-- 对话列表按钮 -->
 						<div class="dropdown">
+							<Pin_fill
+								v-if="conversations.get(cid)?.pinned"
+								class="hoverhidden"
+								style="
+									z-index: 999;
+									position: absolute;
+									right: 50%;
+									top: 50%;
+									transform: translate(50%, -50%) scale(1.5);
+									color: gray;
+								"
+							/>
+
 							<button
 								:id="`conversation-sidebar-dropdown-${cid}-btn`"
 								class="dropdown-btn icon-btn-small hoverable-icon icon"
@@ -1727,6 +1785,113 @@ svg {
 		--scrollbar-color-hover: #fff3;
 	}
 }
+
+/* 通用按钮 */
+.hoverable:hover {
+	background-color: var(--menu-item-highlighted);
+}
+.hoverable:active {
+	background-color: var(--menu-item-active);
+}
+.hoverable-icon {
+	color: transparent;
+}
+.hoverable:hover .hoverable-icon {
+	color: var(--text-tertiary);
+}
+.hoverable:hover .hoverable-icon:hover {
+	color: var(--text-primary);
+}
+.hoverable:hover .hoverhidden {
+	display: none;
+}
+
+.icon-btn-small {
+	border: none;
+	background-color: transparent;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: calc(var(--spacing) * 5);
+	height: calc(var(--spacing) * 5);
+	border-radius: var(--radius-lg);
+}
+.icon-btn {
+	border: none;
+	background-color: transparent;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: calc(var(--spacing) * 9);
+	height: calc(var(--spacing) * 9);
+	border-radius: var(--radius-lg);
+}
+.icon-btn.primary {
+	background-color: var(--btn-bg-primary);
+	color: var(--btn-icon-primary);
+	border: none;
+	outline: none;
+	border-radius: 50%;
+	-webkit-tap-highlight-color: transparent;
+}
+.icon-btn.primary:hover {
+	background-color: var(--btn-bg-primary-hover);
+}
+.icon-btn.primary:active {
+	background-color: var(--btn-bg-primary-active);
+}
+.icon-btn.secondary {
+	background-color: var(--btn-bg-secondary);
+	color: var(--btn-icon-secondary);
+	border: none;
+	outline: none;
+	border-radius: 50%;
+	-webkit-tap-highlight-color: transparent;
+}
+.icon-btn.secondary:hover {
+	background-color: var(--btn-bg-secondary-hover);
+}
+.icon-btn.secondary:active {
+	background-color: var(--btn-bg-secondary-active);
+}
+
+.icon {
+	border-radius: none;
+	padding: 0 0 0 0;
+	margin: none;
+	width: calc(var(--spacing) * 5);
+	height: calc(var(--spacing) * 5);
+}
+
+.icon-l {
+	border-radius: none;
+	padding: 0 0 0 0;
+	margin: none;
+	width: calc(var(--spacing) * 6);
+	height: calc(var(--spacing) * 6);
+}
+
+.menu-separator {
+	height: 1px;
+	background-color: var(--border-sharp);
+	margin-block: 0;
+	margin-inline: calc(var(--spacing) * 4);
+}
+
+.modal {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0, 0, 0, 0.5);
+	z-index: 99;
+	display: none;
+	justify-content: center;
+	align-items: center;
+}
 /* sidebar */
 .sidebar {
 	/* position: fixed; */
@@ -2299,107 +2464,6 @@ svg {
 
 .chat-input .chat-input-bar {
 	display: flex;
-}
-
-/* 通用按钮 */
-.hoverable:hover {
-	background-color: var(--menu-item-highlighted);
-}
-.hoverable:active {
-	background-color: var(--menu-item-active);
-}
-.hoverable-icon {
-	color: var(--text-tertiary);
-}
-.hoverable-icon:hover {
-	color: var(--text-primary);
-}
-
-.icon-btn-small {
-	border: none;
-	background-color: transparent;
-	cursor: pointer;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: calc(var(--spacing) * 5);
-	height: calc(var(--spacing) * 5);
-	border-radius: var(--radius-lg);
-}
-.icon-btn {
-	border: none;
-	background-color: transparent;
-	cursor: pointer;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	width: calc(var(--spacing) * 9);
-	height: calc(var(--spacing) * 9);
-	border-radius: var(--radius-lg);
-}
-.icon-btn.primary {
-	background-color: var(--btn-bg-primary);
-	color: var(--btn-icon-primary);
-	border: none;
-	outline: none;
-	border-radius: 50%;
-	-webkit-tap-highlight-color: transparent;
-}
-.icon-btn.primary:hover {
-	background-color: var(--btn-bg-primary-hover);
-}
-.icon-btn.primary:active {
-	background-color: var(--btn-bg-primary-active);
-}
-.icon-btn.secondary {
-	background-color: var(--btn-bg-secondary);
-	color: var(--btn-icon-secondary);
-	border: none;
-	outline: none;
-	border-radius: 50%;
-	-webkit-tap-highlight-color: transparent;
-}
-.icon-btn.secondary:hover {
-	background-color: var(--btn-bg-secondary-hover);
-}
-.icon-btn.secondary:active {
-	background-color: var(--btn-bg-secondary-active);
-}
-
-.icon {
-	border-radius: none;
-	padding: 0 0 0 0;
-	margin: none;
-	width: calc(var(--spacing) * 5);
-	height: calc(var(--spacing) * 5);
-}
-
-.icon-l {
-	border-radius: none;
-	padding: 0 0 0 0;
-	margin: none;
-	width: calc(var(--spacing) * 6);
-	height: calc(var(--spacing) * 6);
-}
-
-.menu-separator {
-	height: 1px;
-	background-color: var(--border-sharp);
-	margin-block: 0;
-	margin-inline: calc(var(--spacing) * 4);
-}
-
-.modal {
-	position: fixed;
-	top: 0;
-	left: 0;
-	width: 100%;
-	height: 100%;
-	background-color: rgba(0, 0, 0, 0.5);
-	z-index: 99;
-	display: none;
-	justify-content: center;
-	align-items: center;
 }
 
 /* 640px 适配 */
