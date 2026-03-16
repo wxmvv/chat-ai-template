@@ -238,6 +238,7 @@ const showSidebar = () => {
 	isShowSidebar.value = true;
 };
 const hideSidebar = () => {
+	cancelEditingConversationTitle();
 	closeAllDropdown();
 	isShowSidebar.value = false;
 };
@@ -752,13 +753,28 @@ const regenerateMessage = (message) => {
 	startStreaming(assistantMessageId, messages, params);
 };
 
+const editingConversationId = ref(null);
+const newTitle = ref('');
+const startEditingConversationTitle = (id) => {
+	editingConversationId.value = id;
+	newTitle.value = conversations.value.get(id)?.title;
+};
+const finishEditingConversationTitle = () => {
+	retitleConversation(editingConversationId.value, newTitle.value);
+	editingConversationId.value = null;
+	newTitle.value = '';
+};
+const cancelEditingConversationTitle = () => {
+	editingConversationId.value = null;
+	newTitle.value = '';
+};
 // action list
 const conversationActions = ref([
 	{
 		name: '重命名对话',
 		icon: () => Edit,
 		action: (id) => {
-			retitleConversation(id, '你好你好');
+			startEditingConversationTitle(id);
 			closeAllDropdown();
 		},
 		disabledOnNavbar: true
@@ -1263,8 +1279,29 @@ onBeforeUnmount(() => {
 						:class="{ current: conversationId === cid }"
 						@click="switchConversation(cid)"
 					>
-						<div style="display: flex; flex-direction: column; align-items: start">
-							<div>title:{{ conversations.get(cid)?.title }}</div>
+						<div
+							style="
+								display: flex;
+								flex-direction: column;
+								align-items: start;
+								z-index: 100;
+							"
+						>
+							<div
+								v-if="editingConversationId !== cid"
+								@dblclick="startEditingConversationTitle(cid)"
+							>
+								title: {{ conversations.get(cid)?.title }}
+							</div>
+							<input
+								v-else
+								v-model="newTitle"
+								@blur="finishEditingConversationTitle"
+								@keyup.enter="finishEditingConversationTitle"
+								@keyup.esc="cancelEditingConversationTitle"
+								style="width: 200px"
+							/>
+
 							<div>id:{{ cid }}</div>
 						</div>
 
