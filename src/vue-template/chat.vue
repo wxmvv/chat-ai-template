@@ -658,6 +658,31 @@ const AddAssistantMessage = (userQuestionId, extraPayload = {}, index) => {
 };
 
 // send message
+const getTitleByMsg = async (question, conversationId) => {
+	let title = '';
+	const titleStream = provider.value.api.createChatStream({
+		onToken: (t, thinking) => {
+			if (thinking) return;
+			title += t;
+		},
+		onEnd: () => {
+			console.log('titleStream onEnd', title);
+		},
+		onFinally: () => {
+			if (title.trim())
+				conversations.value.set(conversationId, {
+					...conversations.value.get(conversationId),
+					title
+				});
+			else conversations.value.set(conversationId, { title: 'untitled' });
+			console.log('titleStream onFinally');
+		}
+	});
+	const q = `请根据后面的信息生成一个极简的、概括性的标题，用于保存这段聊天记录，不要回答其他的非标题文字: [ ${question} ]`;
+	await titleStream.ask(q);
+	return title;
+};
+
 const buildMessageStream = async () => {
 	const question = inputValue.value;
 	if (!question.trim()) return;
@@ -669,6 +694,11 @@ const buildMessageStream = async () => {
 	scrollToBottomSmooth();
 
 	const messages = buildMessagesUntil();
+	// 生成标题
+	if (messages.filter((m) => m.role === 'user').length === 1) {
+		getTitleByMsg(question, conversationId.value);
+	}
+
 	const assistantMessageId = AddAssistantMessage(userMessageId, { messages });
 
 	// 发送消息的参数
@@ -1155,7 +1185,7 @@ onBeforeUnmount(() => {
 								v-if="editingConversationId !== cid"
 								@dblclick="startEditingConversationTitle(cid)"
 							>
-								title: {{ conversations.get(cid)?.title }}
+								{{ conversations.get(cid)?.title }}
 							</div>
 							<input
 								v-else
@@ -1166,13 +1196,13 @@ onBeforeUnmount(() => {
 								@keyup.esc="cancelEditingConversationTitle"
 							/>
 
-							<div>id:{{ cid }}</div>
+							<!-- <div>id:{{ cid }}</div>
 							<div>
 								created_time:{{ formatTime(conversations.get(cid)?.created_time) }}
 							</div>
 							<div>
 								updated_time:{{ formatTime(conversations.get(cid)?.updated_time) }}
-							</div>
+							</div> -->
 						</div>
 
 						<!-- 对话列表按钮 -->
