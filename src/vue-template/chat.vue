@@ -340,6 +340,7 @@ const retitleConversation = (id, title) => {
 const deleteConversation = (id) => {
 	if (!conversations.value.has(id)) return;
 
+	conversationId.value = null;
 	conversations.value.delete(id);
 	conversationIds.value.splice(conversationIds.value.indexOf(id), 1);
 };
@@ -755,7 +756,6 @@ const copyText = (id) => {
 };
 
 const zanCai = (message, type) => {
-	// console.log('zanCai', message, type);
 	if (message.zanCai === type) {
 		message.zanCai = null;
 	} else {
@@ -796,98 +796,119 @@ const cancelEditingConversationTitle = () => {
 // action list
 const conversationActions = ref([
 	{
-		name: '置顶/取消置顶对话',
+		key: 'pin',
+		name: (id) => {
+			if (conversations.value.get(id)?.pinned) return '取消置顶对话';
+			else if (!conversations.value.get(id)?.pinned) return '置顶对话';
+			return '置顶/取消置顶对话';
+		},
 		icon: () => Pin,
 		action: (id) => {
 			togglePinConversation(id);
 			closeAllDropdown();
-		}
+		},
+		disabledOnNavbar: (id) => !id
 	},
 	{
-		name: '重命名对话',
+		key: 'retitle',
+		name: () => '重命名对话',
 		icon: () => Edit,
 		action: (id) => {
 			startEditingConversationTitle(id);
 			closeAllDropdown();
 		},
-		disabledOnNavbar: true
+		disabledOnNavbar: () => true
 	},
 	{
-		name: '删除对话',
+		key: 'delete',
+		name: () => '删除对话',
 		icon: () => Delete,
 		actionStyle: 'action-warning',
 		action: (id) => {
 			deleteConversation(id);
 			closeAllDropdown();
-		}
+		},
+		disabledOnNavbar: (id) => !id
 	},
 	{
-		name: '导出当前对话JSON',
+		key: 'export',
+		name: () => '导出当前对话JSON',
 		icon: () => Share,
 		action: (id) => {
 			downloadConversation(id);
 			closeAllDropdown();
 		},
-		disabledOnNavbar: false
+		disabledOnNavbar: (id) => !id
 	},
 	{
-		name: '导出全部对话JSON',
+		key: 'export_all',
+		name: () => '导出全部对话JSON',
 		icon: () => Share,
 		action: () => {
 			downloadAllConversations();
 			closeAllDropdown();
 		},
-		disabledOnSidebar: true
+		disabledOnSidebar: () => true,
+		disabledOnNavbar: () => conversationIds.value.length === 0
 	},
 	{
-		name: '导入文件',
+		key: 'import',
+		name: () => '导入文件',
 		icon: () => Share,
 		action: () => importFile(),
-		disabledOnSidebar: true
+		disabledOnSidebar: () => true
 	},
 	{
-		name: '恢复对话JSON',
+		key: 'restore',
+		name: () => '恢复对话JSON',
 		icon: () => Share,
 		action: () => restoreBackup(),
-		disabledOnSidebar: true
+		disabledOnSidebar: () => true
 	}
 ]);
 
 const messageActions = ref([
 	{
+		key: 'copy',
 		name: 'copy',
 		icon: (message) => (copyingId.value === message.id ? Checkmark : Copy),
 		action: (message) => copyText(message.id)
 	},
 	{
+		key: 'edit',
 		name: 'edit',
 		icon: () => Edit,
 		disabled: (message) => message.role === 'assistant'
 	},
 	{
+		key: 'zan',
 		name: 'zan',
 		icon: (message) => (message.zanCai === 'zan' ? Zan_fill : Zan),
 		action: (message) => zanCai(message, 'zan'),
 		disabled: (message) => message.role === 'user' || message.zanCai === 'cai'
 	},
 	{
+		key: 'cai',
 		name: 'cai',
 		icon: (message) => (message.zanCai === 'cai' ? Cai_fill : Cai),
 		action: (message) => zanCai(message, 'cai'),
 		disabled: (message) => message.role === 'user' || message.zanCai === 'zan'
 	},
 	{
+		key: 'share',
 		name: 'share',
 		icon: () => Share,
 		disabled: (message) => message.role === 'user'
 	},
 	{
+		key: 'regenerate',
 		name: 'regenerate',
 		icon: () => Refresh,
 		action: (message) => regenerateMessage(message),
 		disabled: (message) => message.role === 'user'
 	},
 	{
+		key: 'delete',
 		name: 'delete',
 		icon: () => Delete,
 		action: (message) => deleteMessage(message.id),
@@ -897,27 +918,32 @@ const messageActions = ref([
 
 const composerActions = ref([
 	{
+		key: 'add_picture',
 		name: '添加照片和文件',
 		icon: () => FileSvg,
 		action: () => console.log('添加照片和文件')
 	},
 	{
+		key: 'add_line',
 		name: '分割线',
 		type: 'separator'
 	},
 	{
+		key: 'thinking',
 		name: '深度思考',
 		icon: () => Think,
 		action: () => console.log('深度思考'),
 		key: 'thinking'
 	},
 	{
+		key: 'search',
 		name: '网络搜索',
 		icon: () => Websearch,
 		action: () => console.log('网络搜索'),
 		key: 'search'
 	},
 	{
+		key: 'create_picture',
 		name: '创建图片',
 		icon: () => Pic,
 		action: () => console.log('创建图片'),
@@ -1182,7 +1208,11 @@ onBeforeUnmount(() => {
 									v-if="conversationActions && conversationActions.length > 0"
 								>
 									<template v-for="ca in conversationActions" :key="ca">
-										<template v-if="!ca.disabledOnSidebar">
+										<template
+											v-if="
+												!(ca.disabledOnSidebar && ca.disabledOnSidebar(cid))
+											"
+										>
 											<label
 												v-if="!ca.disabled"
 												class="menu-item hoverable"
@@ -1191,7 +1221,9 @@ onBeforeUnmount(() => {
 											>
 												<div class="menu-left">
 													<component :is="ca.icon()" />
-													<div class="menu-item-title">{{ ca.name }}</div>
+													<div class="menu-item-title">
+														{{ ca.name(cid) }}
+													</div>
 												</div>
 												<div class="checkmark">
 													<Checkmark />
@@ -1454,7 +1486,7 @@ onBeforeUnmount(() => {
 		<div id="conversation-navbar-dropdown-menu" class="dropdown-menu">
 			<template v-if="conversationActions && conversationActions.length > 0">
 				<template v-for="ca in conversationActions" :key="ca">
-					<template v-if="!ca.disabledOnNavbar">
+					<template v-if="!(ca.disabledOnNavbar && ca.disabledOnNavbar(conversationId))">
 						<label
 							v-if="!ca.disabled"
 							class="menu-item hoverable"
@@ -1462,8 +1494,8 @@ onBeforeUnmount(() => {
 							:class="ca.actionStyle"
 						>
 							<div class="menu-left">
-								<component :is="ca.icon()" />
-								<div class="menu-item-title">{{ ca.name }}</div>
+								<component :is="ca.icon(conversationActions)" />
+								<div class="menu-item-title">{{ ca.name(conversationId) }}</div>
 							</div>
 							<div class="checkmark">
 								<Checkmark />
