@@ -30,29 +30,35 @@ import Pin from '../icon/pin.svg?component';
 import Pin_fill from '../icon/pin_fill.svg?component';
 
 import hljs from 'highlight.js';
-import 'highlight.js/styles/github.css';
+import '../core/hljs-github.css';
 import markdownit from 'markdown-it';
 const md = markdownit({
 	html: false,
 	xhtmlOut: true,
 	breaks: true,
-	langPrefix: 'language-',
+	langPrefix: '',
 	linkify: true,
 	typographer: true,
 
 	highlight: function (str, lang) {
-		if (lang && hljs.getLanguage(lang)) {
-			try {
-				return (
-					`<pre><code class="hljs ${lang}">` +
-					hljs.highlight(str, { language: lang, ignoreIllegals: true }).value +
-					`</code></pre>`
-				);
-			} catch (__) {}
-		}
+		try {
+			if (!lang || !hljs.getLanguage(lang)) {
+				const result = hljs.highlightAuto(str);
+				return `<pre><code class="hljs">${result.value}</code></pre>`;
+			}
 
-		// fallback（无语言）
-		return `<pre><code class="hljs">` + md.utils.escapeHtml(str) + `</code></pre>`;
+			const result = hljs.highlight(str, {
+				language: lang,
+				ignoreIllegals: true
+			});
+
+			return `<pre><code class="hljs ${lang}">${result.value}</code></pre>`;
+		} catch (err) {
+			console.warn('[highlight error]', err);
+			return (
+				`<pre><code class="hljs plaintext">` + md.utils.escapeHtml(str) + `</code></pre>`
+			);
+		}
 	}
 }).enable('table');
 
@@ -541,7 +547,6 @@ const updateMessageContent = (id, token) => {
 	msg.raw += token;
 	msg.tail += token;
 	// 判断是否安全渲染markdown
-	// if (isSafeToFlush(msg.tail)) {
 	if (isSafeToFlush(msg.tail)) {
 		msg.rendered += md.render(msg.tail);
 		msg.tail = '';
@@ -1094,7 +1099,6 @@ const checkIfAtBottom = (scrollTop, clientHeight, scrollHeight) => {
 };
 
 const handleScroll = (e) => {
-	// console.log('handleScroll', e);
 	const { scrollTop, clientHeight, scrollHeight } = e.target;
 
 	isAtTop.value = scrollTop < 30; // 判断是否在顶部
@@ -1144,19 +1148,16 @@ const handleKeydown = (e) => {
 };
 
 const handleFocus = (e) => {
-	// console.log('handleFocus', e);
 	isFocus.value = true;
 	emit('focus');
 };
 
 const handleBlur = (e) => {
-	// console.log('handleBlur', e);
 	isFocus.value = false;
 	emit('blur');
 };
 
 const handleInput = (e) => {
-	// console.log('handleInput', e);
 	const el = editorRef.value;
 	if (!el) return;
 
@@ -1168,23 +1169,30 @@ const handleInput = (e) => {
 };
 
 const onCompositionStart = (e) => {
-	// console.log('onCompositionStart', e);
 	isComposing = true;
 };
 
 const onCompositionEnd = (e) => {
-	// console.log('onCompositionEnd', e);
 	isComposing = false;
 };
 
 // 生命周期
+let colorSchemeListener;
 onMounted(() => {
 	window.addEventListener('resize', handleResize);
 	document.addEventListener('click', handlePageClick);
+	// 监听主题切换 添加 dark 类
+	colorSchemeListener = window
+		.matchMedia('(prefers-color-scheme: dark)')
+		.addEventListener('change', (e) => {
+			console.log('prefers-color-scheme', e.matches);
+			document.documentElement.classList.toggle('dark', e.matches);
+		});
 });
 onBeforeUnmount(() => {
 	window.removeEventListener('resize', handleResize);
 	document.removeEventListener('click', handlePageClick);
+	colorSchemeListener.removeEventListener('change', colorSchemeListener);
 });
 </script>
 
