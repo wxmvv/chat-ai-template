@@ -29,18 +29,31 @@ import Think from '../icon/think.svg?component';
 import Pin from '../icon/pin.svg?component';
 import Pin_fill from '../icon/pin_fill.svg?component';
 
-// import hljs from 'highlight.js';
+import hljs from 'highlight.js';
+import 'highlight.js/styles/github.css';
 import markdownit from 'markdown-it';
 const md = markdownit({
-	// WARNING: html: true allows HTML tags, which poses XSS security risks
-	// Consider setting html: false or adding HTML sanitization (e.g., DOMPurify) in production
 	html: false,
 	xhtmlOut: true,
 	breaks: true,
 	langPrefix: 'language-',
-	linkify: true, // Enable automatic link detection
-	typographer: true, // Enable typographic replacements
-	quotes: '“”‘’'
+	linkify: true,
+	typographer: true,
+
+	highlight: function (str, lang) {
+		if (lang && hljs.getLanguage(lang)) {
+			try {
+				return (
+					`<pre><code class="hljs ${lang}">` +
+					hljs.highlight(str, { language: lang, ignoreIllegals: true }).value +
+					`</code></pre>`
+				);
+			} catch (__) {}
+		}
+
+		// fallback（无语言）
+		return `<pre><code class="hljs">` + md.utils.escapeHtml(str) + `</code></pre>`;
+	}
 }).enable('table');
 
 // emit
@@ -471,32 +484,64 @@ const restoreBackup = (json) => {
 // message functions
 // helper functions for message
 const isSafeToFlush = (text) => {
-	// 双换行说明段落结束
-	if (text.includes('\n\n')) return true;
+	let inCodeBlock = false;
+	let fence = null;
 
-	// 代码块闭合
-	const codeFenceMatches = text.match(/```/g);
-	if (codeFenceMatches && codeFenceMatches.length % 2 === 0) {
-		return true;
+	// --- 1. 处理 code block ---
+	const fences = text.match(/(```|~~~)/g);
+
+	if (fences) {
+		for (let i = 0; i < fences.length; i++) {
+			if (!inCodeBlock) {
+				inCodeBlock = true;
+				fence = fences[i];
+			} else if (fences[i] === fence) {
+				inCodeBlock = false;
+				fence = null;
+			}
+		}
 	}
 
-	// 列表闭合
-	const listMatches = text.match(/(\*|-|\+|\d+\.)\s*$/g);
-	if (listMatches && listMatches.length % 2 === 0) {
+	if (inCodeBlock) return false;
+
+	// --- 2. 强信号：段落结束 ---
+	if (text.includes('\n\n')) return true;
+
+	// --- 3. 判断是否在 list 中 ---
+	const lines = text.split('\n');
+	const lastLine = lines[lines.length - 1];
+	const prevLine = lines[lines.length - 2] || '';
+
+	const listPattern = /^(\s*)([-*+]|\d+\.)\s+/;
+
+	const isPrevLineList = listPattern.test(prevLine);
+	const isLastLineList = listPattern.test(lastLine);
+
+	// 👉 情况1：刚输入完一个 list item，还没结束 list
+	if (isPrevLineList && lastLine === '') {
+		return false;
+	}
+
+	// 👉 情况2：正在连续 list
+	if (isPrevLineList && isLastLineList) {
+		return false;
+	}
+
+	// --- 4. 弱信号：普通换行 ---
+	if (text.endsWith('\n')) {
 		return true;
 	}
 
 	return false;
 };
-
 const updateMessageContent = (id, token) => {
 	const msg = messageMap.value.get(id);
 	if (!msg) return;
 
 	msg.raw += token;
 	msg.tail += token;
-
 	// 判断是否安全渲染markdown
+	// if (isSafeToFlush(msg.tail)) {
 	if (isSafeToFlush(msg.tail)) {
 		msg.rendered += md.render(msg.tail);
 		msg.tail = '';
@@ -1358,7 +1403,7 @@ onBeforeUnmount(() => {
 							<span style="display: inline" v-if="message.foldThinking">...</span>
 							<div
 								v-else
-								class="streaming-rendered markdown-style"
+								class="streaming-rendered prose"
 								v-html="message.thinkingRaw"
 							></div>
 							<span>&lt;/Thinking&gt;</span>
@@ -1373,10 +1418,7 @@ onBeforeUnmount(() => {
 					<template v-else-if="message.role === 'assistant'">
 						<!-- markdown 渲染 -->
 						<div class="chat-msg-content">
-							<div
-								class="streaming-rendered markdown-style"
-								v-html="message.rendered"
-							></div>
+							<div class="streaming-rendered prose" v-html="message.rendered"></div>
 							<div class="streaming-tail" v-text="message.tail"></div>
 						</div>
 					</template>
@@ -1580,24 +1622,43 @@ svg {
 }
 
 /* markdown渲染 */
-.markdown-style :deep(*) {
-	font-family: inherit;
-	font-size: inherit;
-	line-height: inherit;
-	color: inherit;
-	outline: none;
-	border: none;
-	background-color: transparent;
+.prose :deep(*, ::after, ::before, ::backdrop) {
+	/* box-sizing: border-box;
+	border: 0 solid;
+	margin: 0;
+	padding: 0; */
 }
-.markdown-style :deep(p) {
+.prose :deep(p) {
 	margin-block: 4px;
 }
 
-.markdown-style :deep(ul) {
-	padding-left: 30px;
-	outline: none;
+.prose :deep(hr) {
+	height: 1px;
+	background-color: var(--border-sharp);
 	border: none;
-	background-color: transparent;
+}
+
+.prose :deep(blockquote) {
+	border-left: 4px solid var(--border-sharp);
+	padding-inline: 1rem;
+}
+
+.prose :deep(pre) {
+	overflow: scroll;
+}
+.prose :deep(ul, ol, menu) {
+	padding-inline: 1rem;
+	margin-block: 1rem;
+	height: fit-content;
+	list-style: disc;
+	list-style-position: inside;
+	/* list-style: none; */
+}
+
+.prose :deep(li) {
+	margin-block: 4px;
+	padding-block: 0;
+	height: fit-content;
 }
 
 /* 主要 */
