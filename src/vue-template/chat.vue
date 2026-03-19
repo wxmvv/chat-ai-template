@@ -32,7 +32,7 @@ import Pin_fill from '../icon/pin_fill.svg?component';
 const VUE_TITLE = 'vue-chat-ai-demo';
 
 // markdown 渲染 code 高亮
-import hljs from 'highlight.js';
+import hljs from 'highlight.js/lib/common';
 import '../core/hljs-github.css';
 import markdownit from 'markdown-it';
 const md = markdownit({
@@ -366,9 +366,18 @@ const retitleConversation = (id, title) => {
 const deleteConversation = (id) => {
 	if (!conversations.value.has(id)) return;
 
-	conversationId.value = null;
+	const messageIds = conversationMessages.value.get(id) || [];
+	messageIds.forEach((messageId) => {
+		messageMap.value.delete(messageId);
+	});
+
+	conversationMessages.value.delete(id);
 	conversations.value.delete(id);
 	conversationIds.value.splice(conversationIds.value.indexOf(id), 1);
+
+	if (conversationId.value === id) {
+		conversationId.value = conversationIds.value[0] || null;
+	}
 };
 
 const togglePinConversation = (id) => {
@@ -390,6 +399,9 @@ const updateConversationTime = (id) => {
 	});
 };
 
+const getConversationRecordId = (conversation) =>
+	conversation?.conversation_id || conversation?.id || null;
+
 const importConversation = (json) => {
 	const data = JSON.parse(json);
 
@@ -398,10 +410,21 @@ const importConversation = (json) => {
 	}
 
 	const conv = data.conversation;
+	const convId = getConversationRecordId(conv);
+	if (!convId) {
+		throw new Error('invalid conversation id');
+	}
 
-	conversations.value.set(conv.id, conv);
+	const normalizedConversation = {
+		...conv,
+		conversation_id: convId
+	};
 
-	conversationIds.value.push(conv.id);
+	conversations.value.set(convId, normalizedConversation);
+
+	if (!conversationIds.value.includes(convId)) {
+		conversationIds.value.push(convId);
+	}
 
 	const ids = [];
 
@@ -411,10 +434,10 @@ const importConversation = (json) => {
 		ids.push(msg.id);
 	});
 
-	conversationMessages.value.set(conv.id, ids);
+	conversationMessages.value.set(convId, ids);
 };
 
-const exportConversation = (convId) => {
+const getConversationDataById = (convId) => {
 	const conv = conversations.value.get(convId);
 
 	const msgIds = conversationMessages.value.get(convId) || [];
@@ -431,7 +454,8 @@ const exportConversation = (convId) => {
 	return JSON.stringify(data, null, 2);
 };
 
-const exportAllConversations = () => {
+// 获取全部对话数据
+const getAllConversationsData = () => {
 	const result = [];
 
 	conversationIds.value.forEach((id) => {
@@ -459,13 +483,13 @@ const exportAllConversations = () => {
 };
 
 const downloadConversation = (convId) => {
-	const json = exportConversation(convId);
-	downloadJSON('conversation.json', json);
+	const json = getConversationDataById(convId);
+	downloadJSON(`conversation_${convId}.json`, json);
 };
 
-const downloadAllConversations = () => {
-	const json = exportAllConversations();
-	downloadJSON('conversations.json', json);
+const downloadBackUp = () => {
+	const json = getAllConversationsData();
+	downloadJSON('conversations_backup.json', json);
 };
 
 const restoreBackup = (json) => {
@@ -477,10 +501,19 @@ const restoreBackup = (json) => {
 
 	data.data.forEach((item) => {
 		const conv = item.conversation;
+		const convId = getConversationRecordId(conv);
+		if (!convId) return;
 
-		conversations.value.set(conv.id, conv);
+		const normalizedConversation = {
+			...conv,
+			conversation_id: convId
+		};
 
-		conversationIds.value.push(conv.id);
+		conversations.value.set(convId, normalizedConversation);
+
+		if (!conversationIds.value.includes(convId)) {
+			conversationIds.value.push(convId);
+		}
 
 		const ids = [];
 
@@ -490,7 +523,7 @@ const restoreBackup = (json) => {
 			ids.push(msg.id);
 		});
 
-		conversationMessages.value.set(conv.id, ids);
+		conversationMessages.value.set(convId, ids);
 	});
 };
 
@@ -764,6 +797,16 @@ const buildMessageStream = async () => {
 	startStreaming(assistantMessageId, messages, params);
 };
 
+let scrollFrameId = null;
+const scheduleAutoScroll = () => {
+	if (userScrolling || !autoScroll.value || scrollFrameId !== null) return;
+
+	scrollFrameId = requestAnimationFrame(async () => {
+		scrollFrameId = null;
+		await scrollToBottom();
+	});
+};
+
 const startStreaming = async (assistantMessageId, msg, params) => {
 	let reasoningActive = false;
 
@@ -792,7 +835,7 @@ const startStreaming = async (assistantMessageId, msg, params) => {
 				updateMessageThinkingStatus(assistantMessageId, false);
 			}
 			updateMessageContent(assistantMessageId, t);
-			if (!userScrolling && autoScroll.value) safeScrollToBottom();
+			scheduleAutoScroll();
 		},
 		onError: (err) => {
 			console.log('stream onError', err);
@@ -820,7 +863,7 @@ const startStreaming = async (assistantMessageId, msg, params) => {
 			endMessageRendering(assistantMessageId);
 			isStreaming.value = false;
 			updateMessageStatus(assistantMessageId, 'sent');
-			if (!userScrolling && autoScroll.value) safeScrollToBottom();
+			scheduleAutoScroll();
 		},
 		onFinally: () => {
 			console.log('stream onFinally');
@@ -949,7 +992,7 @@ const conversationActions = ref([
 		name: () => '导出全部对话JSON',
 		icon: () => Share,
 		action: () => {
-			downloadAllConversations();
+			downloadBackUp();
 			closeAllDropdown();
 		},
 		disabledOnSidebar: () => true,
@@ -957,16 +1000,16 @@ const conversationActions = ref([
 	},
 	{
 		key: 'import',
-		name: () => '导入文件',
+		name: () => '导入对话JSON文件',
 		icon: () => Share,
-		action: () => importFile(),
+		action: () => importFile(importConversation),
 		disabledOnSidebar: () => true
 	},
 	{
 		key: 'restore',
-		name: () => '恢复对话JSON',
+		name: () => '恢复备份JSON文件',
 		icon: () => Share,
-		action: () => restoreBackup(),
+		action: () => importFile(restoreBackup),
 		disabledOnSidebar: () => true
 	}
 ]);
@@ -1132,7 +1175,7 @@ const handleContainerScroll = (e) => {
 
 // handler
 const handleWindwoResize = (e) => {
-	console.log('handleResize', e);
+	updateDropdownPosition();
 };
 
 const handleWheel = (e) => {
@@ -1212,6 +1255,10 @@ onMounted(() => {
 onBeforeUnmount(() => {
 	window.removeEventListener('resize', handleWindwoResize);
 	document.removeEventListener('click', handleDocClick);
+	if (scrollFrameId !== null) {
+		cancelAnimationFrame(scrollFrameId);
+		scrollFrameId = null;
+	}
 	if (mediaQueryList && colorSchemeHandler) {
 		mediaQueryList.removeEventListener('change', colorSchemeHandler);
 	}

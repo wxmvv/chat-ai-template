@@ -30,14 +30,27 @@ const downloadJSON = (fileName, json) => {
 	URL.revokeObjectURL(url);
 };
 
-const importFile = (file) => {
-	const reader = new FileReader();
+const importFile = (onLoad, accept = '.json,application/json') => {
+	if (typeof document === 'undefined') {
+		throw new Error('File import is only available in browser environments.');
+	}
 
-	reader.onload = (e) => {
-		importConversation(e.target.result);
+	const input = document.createElement('input');
+	input.type = 'file';
+	input.accept = accept;
+
+	input.onchange = (event) => {
+		const file = event.target?.files?.[0];
+		if (!file) return;
+
+		const reader = new FileReader();
+		reader.onload = (e) => {
+			onLoad?.(e.target?.result || '');
+		};
+		reader.readAsText(file);
 	};
 
-	reader.readAsText(file);
+	input.click();
 };
 
 export { UUID, RandomId, formatTime, downloadJSON, importFile };
