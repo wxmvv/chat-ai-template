@@ -29,6 +29,9 @@ import Think from '../icon/think.svg?component';
 import Pin from '../icon/pin.svg?component';
 import Pin_fill from '../icon/pin_fill.svg?component';
 
+const VUE_TITLE = 'vue-chat-ai-demo';
+
+// markdown 渲染 code 高亮
 import hljs from 'highlight.js';
 import '../core/hljs-github.css';
 import markdownit from 'markdown-it';
@@ -62,49 +65,50 @@ const md = markdownit({
 	}
 }).enable('table');
 
-// emit
-const emit = defineEmits(['focus', 'blur']);
-
-// provider model
-import deepseek from '../core/deepseek';
-import ollama from '../core/ollama';
+// provider model utils
+import { deepseek, ollama } from '../core/ai';
 import { UUID, downloadJSON, formatTime, importFile } from '../core/utils';
-
-const pageTitle = ref('vue-chat-ai-demo');
-const showBack = ref(true);
-const goBack = () => {
-	document.querySelector('#vue-app').style.display = 'none';
-	document.querySelector('#app').style.display = 'flex';
-};
 
 const providerList = [
 	{
 		name: 'ollama',
-		api: ollama,
+		client: ollama(),
 		icon: () => Star,
 		desc: '本地小羊驼🦙'
 	},
 	{
 		name: 'deepseek',
-		api: deepseek,
+		client: deepseek(),
 		icon: () => Gpt,
 		desc: '深度求索！'
 	}
 ];
 const provider = ref(providerList[1]);
-const modelList = ref();
-const model = ref();
+const modelList = ref(null);
+const model = ref(null);
+const getActiveProvider = () => provider.value?.client || null;
+const getActiveModelId = () => model.value?.id || getActiveProvider()?.defaultModelId || null;
+const getActiveLanguageModel = () => {
+	const currentProvider = getActiveProvider();
+	const currentModelId = getActiveModelId();
+
+	if (!currentProvider || !currentModelId) {
+		throw new Error('No provider or model selected');
+	}
+
+	return currentProvider.languageModel(currentModelId);
+};
 const updateModelList = async (p) => {
 	modelList.value = null;
 	model.value = null;
 	try {
-		const res = await p.api.getModelList();
+		const res = await p.client.listModels();
 		modelList.value = res.data;
-		model.value = modelList.value[0] || null;
+		model.value = modelList.value[0] || { id: p.client.defaultModelId };
 	} catch (err) {
 		console.log(err);
-		modelList.value = null;
-		model.value = null;
+		modelList.value = [{ id: p.client.defaultModelId }];
+		model.value = modelList.value[0];
 	}
 };
 watch(
@@ -117,8 +121,39 @@ watch(
 );
 
 // dropdown menu
-const dropdownRegistry = new Map();
+const dropdownRegistry = ref(new Map());
 const DropdownMenuGap = 4; // btn 和 menu 的间距
+
+const getDropdownPosition = ({
+	rect,
+	menuWidth,
+	menuHeight,
+	viewportWidth,
+	viewportHeight,
+	gap = 4,
+	padding = 10
+}) => {
+	let left = rect.left;
+	let top = rect.bottom + gap;
+
+	if (left + menuWidth > viewportWidth) {
+		left = rect.right - menuWidth;
+	}
+
+	if (top + menuHeight > viewportHeight) {
+		top = rect.top - menuHeight - gap;
+	}
+
+	if (left < 0) {
+		left = padding;
+	}
+
+	if (top < 0) {
+		top = padding;
+	}
+
+	return { left, top };
+};
 
 const openDropdown = (key, btnId = key + '-btn', menuId = key + '-menu') => {
 	const btnEl = document.getElementById(btnId);
@@ -138,9 +173,14 @@ const openDropdown = (key, btnId = key + '-btn', menuId = key + '-menu') => {
 	const pageEl = document.getElementById('chat-ai-template');
 	pageEl.appendChild(menuEl);
 
-	const menuWidth = menuEl.offsetWidth;
-	const menuHeight = menuEl.offsetHeight;
-	const { left, top } = checkPosition(rect, menuWidth, menuHeight);
+	const { left, top } = getDropdownPosition({
+		rect,
+		menuWidth: menuEl.offsetWidth,
+		menuHeight: menuEl.offsetHeight,
+		viewportWidth: window.innerWidth,
+		viewportHeight: window.innerHeight,
+		gap: DropdownMenuGap
+	});
 
 	Object.assign(menuEl.style, {
 		position: 'fixed',
@@ -150,61 +190,14 @@ const openDropdown = (key, btnId = key + '-btn', menuId = key + '-menu') => {
 		display: 'block',
 		visibility: 'visible'
 	});
-
-	dropdownRegistry.set(key, { btnEl, menuEl, placeholder });
-};
-
-// 边界检测
-const checkPosition = (rect, width, height) => {
-	let left = rect.left;
-	let top = rect.bottom + DropdownMenuGap;
-
-	// 右边界
-	if (left + width > window.innerWidth) {
-		left = rect.right - width;
-	}
-
-	// 下边界
-	if (top + height > window.innerHeight) {
-		top = rect.top - height - DropdownMenuGap;
-	}
-
-	// 左边界
-	if (left < 0) {
-		left = 10;
-	}
-
-	// 上边界
-	if (top < 0) {
-		top = 10;
-	}
-
-	return { left, top };
-};
-
-const updatePosition = (key, btnId = key + '-btn', menuId = key + '-menu') => {
-	const btnEl = document.getElementById(btnId);
-	const menuEl = document.getElementById(menuId);
-	if (!btnEl || !menuEl) return;
-
-	const rect = btnRef.value.getBoundingClientRect();
-
-	const menuWidth = menuEl.offsetWidth;
-	const menuHeight = menuEl.offsetHeight;
-	const { left, top } = checkPosition(rect, menuWidth, menuHeight);
-
-	style.value = {
-		position: 'fixed',
-		left: left + 'px',
-		top: top + 'px',
-		zIndex: 9999
-	};
+	console.log('添加dropdown', key);
+	dropdownRegistry.value.set(key, { btnEl, menuEl, placeholder });
 };
 
 const closeDropdown = (key) => {
 	console.log('closeDropdown', key);
 
-	const item = dropdownRegistry.get(key);
+	const item = dropdownRegistry.value.get(key);
 	if (!item) return;
 
 	const { menuEl, placeholder } = item;
@@ -219,27 +212,41 @@ const closeDropdown = (key) => {
 		display: 'none'
 	});
 
-	dropdownRegistry.delete(key);
+	dropdownRegistry.value.delete(key);
 };
 
 const moveDropdown = (key) => {
-	const item = dropdownRegistry.get(key);
+	const item = dropdownRegistry.value.get(key);
 	if (!item) return;
 
 	const { btnEl, menuEl } = item;
 	const rect = btnEl.getBoundingClientRect();
+	const { left, top } = getDropdownPosition({
+		rect,
+		menuWidth: menuEl.offsetWidth,
+		menuHeight: menuEl.offsetHeight,
+		viewportWidth: window.innerWidth,
+		viewportHeight: window.innerHeight,
+		gap: DropdownMenuGap
+	});
 
 	Object.assign(menuEl.style, {
 		position: 'fixed',
-		left: rect.left + 'px',
-		top: rect.bottom + 'px',
+		left: left + 'px',
+		top: top + 'px',
 		zIndex: 9999
+	});
+};
+
+const updateDropdownPosition = () => {
+	dropdownRegistry.value.forEach((_, key) => {
+		moveDropdown(key);
 	});
 };
 
 const toggleDropdown = (key, e) => {
 	e.stopPropagation(); // 阻止冒泡
-	if (dropdownRegistry.has(key)) {
+	if (dropdownRegistry.value.has(key)) {
 		closeDropdown(key);
 	} else {
 		closeAllDropdown();
@@ -248,7 +255,7 @@ const toggleDropdown = (key, e) => {
 };
 
 const closeAllDropdown = () => {
-	dropdownRegistry.forEach((_, key) => {
+	dropdownRegistry.value.forEach((_, key) => {
 		closeDropdown(key);
 	});
 };
@@ -540,6 +547,7 @@ const isSafeToFlush = (text) => {
 
 	return false;
 };
+
 const updateMessageContent = (id, token) => {
 	const msg = messageMap.value.get(id);
 	if (!msg) return;
@@ -662,7 +670,7 @@ const AddUserMessage = (question) => {
 		id: userMessageId,
 		role: 'user', // assistant | user
 		provider: provider.value.name,
-		model: model.value.id,
+		model: getActiveModelId(),
 		rendered: question,
 		raw: question,
 		status: 'sent',
@@ -687,7 +695,7 @@ const AddAssistantMessage = (userQuestionId, extraPayload = {}, index) => {
 		conversation_id: conversationId.value,
 		id: assistantMessageId,
 		provider: provider.value.name,
-		model: model.value.id,
+		model: getActiveModelId(),
 		role: 'assistant',
 		rendered: '', // markdown渲染后的html
 		raw: '', // 初始为空字符串, 原始token
@@ -710,26 +718,23 @@ const AddAssistantMessage = (userQuestionId, extraPayload = {}, index) => {
 // send message
 const getTitleByMsg = async (question, conversationId) => {
 	let title = '';
-	const titleStream = provider.value.api.createChatStream({
-		onToken: (t, thinking) => {
-			if (thinking) return;
+	const titleStream = getActiveLanguageModel().streamText({
+		prompt: `请根据后面的信息生成一个极简的、概括性的标题，用于保存这段聊天记录，不要回答其他的非标题文字: [ ${question} ]`,
+		onText: (t) => {
 			title += t;
-		},
-		onEnd: () => {
-			console.log('titleStream onEnd', title);
-		},
-		onFinally: () => {
-			if (title.trim())
-				conversations.value.set(conversationId, {
-					...conversations.value.get(conversationId),
-					title
-				});
-			else conversations.value.set(conversationId, { title: 'untitled' });
-			console.log('titleStream onFinally');
 		}
 	});
-	const q = `请根据后面的信息生成一个极简的、概括性的标题，用于保存这段聊天记录，不要回答其他的非标题文字: [ ${question} ]`;
-	await titleStream.ask(q);
+	await titleStream.completion.catch(() => {});
+	if (title.trim())
+		conversations.value.set(conversationId, {
+			...conversations.value.get(conversationId),
+			title
+		});
+	else
+		conversations.value.set(conversationId, {
+			...conversations.value.get(conversationId),
+			title: 'untitled'
+		});
 	return title;
 };
 
@@ -753,16 +758,17 @@ const buildMessageStream = async () => {
 
 	// 发送消息的参数
 	const params = {
-		model: model.value.id,
-		thinking: chatState.value.thinking,
-		test: 'test'
+		thinking: chatState.value.thinking
 	};
 
 	startStreaming(assistantMessageId, messages, params);
 };
 
 const startStreaming = async (assistantMessageId, msg, params) => {
-	chatStream = provider.value.api.createChatStream({
+	let reasoningActive = false;
+
+	chatStream = getActiveLanguageModel().streamText({
+		messages: msg,
 		onStart: () => {
 			console.log('stream onStart');
 			isStreaming.value = true;
@@ -771,30 +777,46 @@ const startStreaming = async (assistantMessageId, msg, params) => {
 		onResponse: (r) => {
 			console.log('streaming onResponse', r);
 		},
-		onThinkingStart: () => {
-			console.log('stream onThinkingStart');
-			updateMessageThinkingStatus(assistantMessageId, true);
+		onReasoning: (t) => {
+			if (!reasoningActive) {
+				console.log('stream onThinkingStart');
+				reasoningActive = true;
+				updateMessageThinkingStatus(assistantMessageId, true);
+			}
+			updateMessageThinking(assistantMessageId, t);
 		},
-		onThinkingEnd: () => {
-			console.log('stream onThinkingEnd');
-			updateMessageThinkingStatus(assistantMessageId, false);
-		},
-		onToken: (t, thinking) => {
-			if (thinking) {
-				updateMessageThinking(assistantMessageId, t);
-			} else updateMessageContent(assistantMessageId, t);
-			if (!userScrolling && autoScroll.value && !thinking) safeScrollToBottom();
+		onText: (t) => {
+			if (reasoningActive) {
+				console.log('stream onThinkingEnd');
+				reasoningActive = false;
+				updateMessageThinkingStatus(assistantMessageId, false);
+			}
+			updateMessageContent(assistantMessageId, t);
+			if (!userScrolling && autoScroll.value) safeScrollToBottom();
 		},
 		onError: (err) => {
 			console.log('stream onError', err);
+			reasoningActive = false;
+			isStreaming.value = false;
+			updateMessageThinkingStatus(assistantMessageId, false);
+			endMessageRendering(assistantMessageId);
 			updateMessageStatus(assistantMessageId, 'error');
 		},
 		onAbort: () => {
 			console.log('stream onAbort success');
+			reasoningActive = false;
+			isStreaming.value = false;
+			updateMessageThinkingStatus(assistantMessageId, false);
+			endMessageRendering(assistantMessageId);
 			updateMessageStatus(assistantMessageId, 'aborted');
 		},
-		onEnd: () => {
-			console.log('stream onEnd');
+		onFinish: () => {
+			if (reasoningActive) {
+				console.log('stream onThinkingEnd');
+				reasoningActive = false;
+				updateMessageThinkingStatus(assistantMessageId, false);
+			}
+			console.log('stream onFinish');
 			endMessageRendering(assistantMessageId);
 			isStreaming.value = false;
 			updateMessageStatus(assistantMessageId, 'sent');
@@ -803,9 +825,9 @@ const startStreaming = async (assistantMessageId, msg, params) => {
 		onFinally: () => {
 			console.log('stream onFinally');
 		},
-		...params
+		providerOptions: params
 	});
-	await chatStream.chat(msg);
+	await chatStream.completion.catch(() => {});
 };
 
 const stopStreaming = () => {
@@ -852,7 +874,7 @@ const regenerateMessage = (message) => {
 	const messages = buildMessagesUntil(message.parent);
 	const assistantMessageId = AddAssistantMessage(message.parent, { messages }, index);
 	const params = {
-		model: model.value.id
+		thinking: chatState.value.thinking
 	};
 	startStreaming(assistantMessageId, messages, params);
 };
@@ -869,10 +891,12 @@ const finishEditingConversationTitle = () => {
 	editingConversationId.value = null;
 	newTitle.value = '';
 };
+
 const cancelEditingConversationTitle = () => {
 	editingConversationId.value = null;
 	newTitle.value = '';
 };
+
 // action list
 const conversationActions = ref([
 	{
@@ -1098,22 +1122,19 @@ const checkIfAtBottom = (scrollTop, clientHeight, scrollHeight) => {
 	return scrollTop + clientHeight >= scrollHeight - 80; // 允许100px内容可见
 };
 
-const handleScroll = (e) => {
+const handleContainerScroll = (e) => {
 	const { scrollTop, clientHeight, scrollHeight } = e.target;
 
 	isAtTop.value = scrollTop < 30; // 判断是否在顶部
 	isAtBottom = checkIfAtBottom(scrollTop, clientHeight, scrollHeight); // 判断是否在底部
 	showScrollButton.value = !isAtBottom;
-
-	dropdownRegistry.forEach((_, key) => {
-		moveDropdown(key);
-	});
 };
 
 // handler
-const handleResize = (e) => {
+const handleWindwoResize = (e) => {
 	console.log('handleResize', e);
 };
+
 const handleWheel = (e) => {
 	userScrolling = true;
 	autoScroll.value = false; // 用户滚动时则关闭自动滚动
@@ -1134,7 +1155,7 @@ const handleTouchMove = (e) => {
 	if (e.touches.length > 1) return; // 多指操作
 };
 
-const handlePageClick = (e) => {
+const handleDocClick = (e) => {
 	closeAllDropdown();
 };
 
@@ -1149,12 +1170,10 @@ const handleKeydown = (e) => {
 
 const handleFocus = (e) => {
 	isFocus.value = true;
-	emit('focus');
 };
 
 const handleBlur = (e) => {
 	isFocus.value = false;
-	emit('blur');
 };
 
 const handleInput = (e) => {
@@ -1177,22 +1196,25 @@ const onCompositionEnd = (e) => {
 };
 
 // 生命周期
-let colorSchemeListener;
+let mediaQueryList;
+let colorSchemeHandler;
 onMounted(() => {
-	window.addEventListener('resize', handleResize);
-	document.addEventListener('click', handlePageClick);
-	// 监听主题切换 添加 dark 类
-	colorSchemeListener = window
-		.matchMedia('(prefers-color-scheme: dark)')
-		.addEventListener('change', (e) => {
-			console.log('prefers-color-scheme', e.matches);
-			document.documentElement.classList.toggle('dark', e.matches);
-		});
+	window.addEventListener('resize', handleWindwoResize);
+	document.addEventListener('click', handleDocClick);
+	mediaQueryList = window.matchMedia('(prefers-color-scheme: dark)');
+	colorSchemeHandler = (e) => {
+		console.log('prefers-color-scheme', e.matches);
+		document.documentElement.classList.toggle('dark', e.matches);
+	};
+	mediaQueryList.addEventListener('change', colorSchemeHandler);
+	document.documentElement.classList.toggle('dark', mediaQueryList.matches);
 });
 onBeforeUnmount(() => {
-	window.removeEventListener('resize', handleResize);
-	document.removeEventListener('click', handlePageClick);
-	colorSchemeListener.removeEventListener('change', colorSchemeListener);
+	window.removeEventListener('resize', handleWindwoResize);
+	document.removeEventListener('click', handleDocClick);
+	if (mediaQueryList && colorSchemeHandler) {
+		mediaQueryList.removeEventListener('change', colorSchemeHandler);
+	}
 });
 </script>
 
@@ -1218,7 +1240,7 @@ onBeforeUnmount(() => {
 					新聊天
 				</button>
 			</div>
-			<div class="sidebar-body">
+			<div class="sidebar-body" @scroll="updateDropdownPosition">
 				<div class="history-list">
 					<a
 						v-for="cid in sortedConversationIds"
@@ -1326,7 +1348,7 @@ onBeforeUnmount(() => {
 		<div
 			class="chat-container"
 			ref="chatContainerRef"
-			@scroll="handleScroll"
+			@scroll="handleContainerScroll"
 			@wheel="handleWheel"
 			@touchstart="handleTouchStart"
 			@touchend="handleTouchEnd"
@@ -1342,10 +1364,6 @@ onBeforeUnmount(() => {
 						style="transform: rotate(0deg)"
 					>
 						<Sidebar class="icon" />
-					</button>
-					<!-- 返回首页 -->
-					<button v-if="showBack" class="icon-btn hoverable page-back" @click="goBack">
-						<ArrowUp class="icon" />
 					</button>
 					<!-- 切换提供商 -->
 					<div class="dropdown">
@@ -1388,7 +1406,7 @@ onBeforeUnmount(() => {
 			<!-- 对话 -->
 			<div class="chat-msg-container">
 				<!-- 中间标题 -->
-				<div v-if="!hasMessages" class="page-title-container">{{ pageTitle }}</div>
+				<div v-if="!hasMessages" class="page-title-container">{{ VUE_TITLE }}</div>
 
 				<!-- 消息列表 -->
 				<div
@@ -1631,10 +1649,9 @@ svg {
 
 /* markdown渲染 */
 .prose :deep(*, ::after, ::before, ::backdrop) {
-	/* box-sizing: border-box;
+	box-sizing: border-box;
 	border: 0 solid;
 	margin: 0;
-	padding: 0; */
 }
 .prose :deep(p) {
 	margin-block: 4px;
