@@ -45,3 +45,7 @@ chat-ai-template
 ## 📄 License
 
 MIT License
+
+# archive-20260319
+
+这个版本手写了文字流相关的代码，已经可以基本使用。main中会参考vercel ai sdk来重新实现core
