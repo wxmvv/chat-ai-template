@@ -51,7 +51,7 @@ import {
 	sortConversationIds
 } from './chat-helpers.js';
 
-const VUE_TITLE = 'vue-chat-ai-demo';
+const VUE_TITLE = 'react-chat-ai-demo';
 const DropdownMenuGap = 4;
 const system = 'You are a helpful assistant.';
 

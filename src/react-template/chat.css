@@ -543,12 +543,12 @@
 .react-chat-ai-template .page-title-container {
 	color: var(--text-primary);
 	font-size: 24px;
-	position: absolute;
 	width: 100%;
-	height: 100%;
+	margin-top: calc(50vh - var(--spacing) * 65);
+	transform: translateY(calc(var(--spacing) * 14));
 	top: 0;
 	text-align: center;
-	align-content: center;
+	align-content: end;
 }
 
 /* 顶部导航 */
@@ -701,7 +701,6 @@
 	flex-direction: column;
 	height: auto;
 	width: 100%;
-	flex: 1;
 	background-color: transparent;
 	padding-bottom: calc(var(--spacing) * 25);
 	color: var(--text-primary);
@@ -857,6 +856,7 @@
 	position: sticky;
 	bottom: 0;
 	z-index: 10;
+	justify-content: center;
 }
 .react-chat-ai-template .chat-input-container::after {
 	content: '';
@@ -900,6 +900,7 @@
 /* input */
 .react-chat-ai-template .chat-input {
 	width: 100%;
+	max-width: 768px;
 	height: auto;
 	background-color: var(--input-bg);
 	box-shadow: var(--input-shadow);
@@ -993,5 +994,15 @@
 	}
 	.react-chat-ai-template .modal {
 		display: flex;
+	}
+
+	.react-chat-ai-template .page-title-container {
+		margin-top: calc(var(--spacing) * 20);
+		transform: none;
+		height: 100%;
+		align-content: center;
+	}
+	.react-chat-ai-template .chat-msg-container {
+		flex: 1;
 	}
 }
