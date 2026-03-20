@@ -2261,10 +2261,10 @@ onBeforeUnmount(() => {
 	font-size: 24px;
 	position: absolute;
 	width: 100%;
-	height: 100%;
+	height: calc(50% - var(--spacing) * 25 - var(--spacing) * 5);
 	top: 0;
 	text-align: center;
-	align-content: center;
+	align-content: end;
 }
 
 /* 顶部导航 */
@@ -2416,8 +2416,9 @@ onBeforeUnmount(() => {
 	display: flex;
 	flex-direction: column;
 	height: auto;
+	min-height: calc(50% - var(--spacing) * 25 - var(--spacing) * 5);
 	width: 100%;
-	flex: 1;
+	/* flex: 1; */
 	background-color: transparent;
 	padding-bottom: calc(var(--spacing) * 25);
 	color: var(--text-primary);
@@ -2573,6 +2574,7 @@ onBeforeUnmount(() => {
 	position: sticky;
 	bottom: 0;
 	z-index: 10;
+	justify-content: center;
 }
 .vue-chat-ai-template .chat-input-container::after {
 	content: '';
@@ -2616,6 +2618,7 @@ onBeforeUnmount(() => {
 /* input */
 .vue-chat-ai-template .chat-input {
 	width: 100%;
+	max-width: 768px;
 	height: auto;
 	background-color: var(--input-bg);
 	box-shadow: var(--input-shadow);
@@ -2709,6 +2712,14 @@ onBeforeUnmount(() => {
 	}
 	.vue-chat-ai-template .modal {
 		display: flex;
+	}
+
+	.vue-chat-ai-template .page-title-container {
+		height: 100%;
+		align-content: center;
+	}
+	.vue-chat-ai-template .chat-msg-container {
+		flex: 1;
 	}
 }
 </style>
