@@ -1522,7 +1522,10 @@ onBeforeUnmount(() => {
 						</div>
 					</template>
 					<!-- message下的操作按钮 -->
-					<div v-if="message.role === 'assistant' && formatUsageLabel(message.usage)" class="message-usage">
+					<div
+						v-if="message.role === 'assistant' && formatUsageLabel(message.usage)"
+						class="message-usage"
+					>
 						<span>{{ formatUsageLabel(message.usage) }}</span>
 						<span v-if="typeof message.usage?.inputTokens === 'number'">
 							输入 {{ message.usage.inputTokens.toLocaleString('en-US') }}
@@ -1795,7 +1798,6 @@ svg {
 	--gray-950: #0d0d0d;
 	--gray-975: #0c0c0c;
 	--gray-1000: #0b0b0b;
-	--brand-purple: #ab68ff;
 }
 
 .chat-ai-template {
