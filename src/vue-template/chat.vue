@@ -795,7 +795,8 @@ const buildMessageStream = async () => {
 	const userMessageId = AddUserMessage(question);
 
 	clearInput();
-	scrollToBottomSmooth();
+
+	await scrollToLastUserMessage();
 
 	const messages = buildMessagesUntil();
 	// 生成标题
@@ -1163,6 +1164,24 @@ const scrollToBottomSmooth = async () => {
 	if (!el) return;
 
 	el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+};
+
+// 滚动到 用户最后一条信息 在顶部
+const scrollToLastUserMessage = async () => {
+	await nextTick();
+	const el = chatContainerRef.value;
+	if (!el) return;
+
+	// 找到所有用户消息，取最后一个
+	const messages = el.querySelectorAll('.chat-msg-user');
+	const lastMessage = messages[messages.length - 1];
+
+	if (!lastMessage) return;
+
+	el.scrollTo({
+		top: lastMessage.offsetTop - 52,
+		behavior: 'smooth'
+	});
 };
 
 // 需改进 安全滚动到底部
@@ -2259,9 +2278,9 @@ onBeforeUnmount(() => {
 .vue-chat-ai-template .page-title-container {
 	color: var(--text-primary);
 	font-size: 24px;
-	position: absolute;
 	width: 100%;
-	height: calc(50% - var(--spacing) * 25 - var(--spacing) * 5);
+	margin-top: calc(50vh - var(--spacing) * 65);
+	transform: translateY(calc(var(--spacing) * 14));
 	top: 0;
 	text-align: center;
 	align-content: end;
@@ -2418,7 +2437,6 @@ onBeforeUnmount(() => {
 	height: auto;
 	min-height: calc(50% - var(--spacing) * 25 - var(--spacing) * 5);
 	width: 100%;
-	/* flex: 1; */
 	background-color: transparent;
 	padding-bottom: calc(var(--spacing) * 25);
 	color: var(--text-primary);
@@ -2715,6 +2733,8 @@ onBeforeUnmount(() => {
 	}
 
 	.vue-chat-ai-template .page-title-container {
+		margin-top: calc(var(--spacing) * 20);
+		transform: none;
 		height: 100%;
 		align-content: center;
 	}
