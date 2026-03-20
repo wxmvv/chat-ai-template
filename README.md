@@ -8,8 +8,7 @@ This project provides a lightweight, dependency-free implementation of a streami
 
 - 💬 ChatGPT-style conversation interface
 - ⚡ Streaming response support (real-time output)
-- 🧩 No external dependencies required
-- 🪶 Minimal CSS and JavaScript footprint
+- 🧩 only markdwon-it & highlight.js dependencies required
 - 📦 Copy-paste ready — works even inside large projects
 - 🔧 Easy API configuration
 - 🧱 Multiple implementations included:
@@ -36,10 +35,8 @@ chat-ai-template
 │   ├── core        # api logic
 │   ├── vue-template
 |   |   └──chat       # vue page
-│   ├── react-template
-|   |   └──chat       # react page
-│   └── vanilla-template
-|       └──chat       # vanilla page
+│   └── react-template
+|       └──chat       # react page
 ```
 
 ## 📄 License
