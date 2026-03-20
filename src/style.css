@@ -110,19 +110,17 @@ body {
 } */
 
 /* vue ds */
-.input-container {
-	width: 100%;
-	display: flex;
-	flex-direction: row;
-	gap: 12px;
-}
-
-.input {
-	font-size: 1em;
-	flex: 1;
-}
-
 #vue-app {
+	display: flex;
+	flex-direction: column;
+	height: 100svh;
+	width: 100vw;
+	padding: 0;
+	margin: 0;
+}
+
+/* vue */
+#react-app {
 	display: flex;
 	flex-direction: column;
 	height: 100svh;

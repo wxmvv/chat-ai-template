@@ -176,7 +176,7 @@ const openDropdown = (key, btnId = key + '-btn', menuId = key + '-menu') => {
 	menuEl.style.visibility = 'hidden';
 	menuEl.style.position = 'fixed';
 
-	const pageEl = document.getElementById('chat-ai-template');
+	const pageEl = document.getElementById('vue-chat-ai-template');
 	pageEl.appendChild(menuEl);
 
 	const { left, top } = getDropdownPosition({
@@ -1284,7 +1284,7 @@ onBeforeUnmount(() => {
 
 <template>
 	<!-- container -->
-	<div class="chat-ai-template" id="chat-ai-template">
+	<div class="vue-chat-ai-template" id="vue-chat-ai-template">
 		<!-- sidebar -->
 		<div class="sidebar" :class="{ show: isShowSidebar }">
 			<div class="sidebar-header">
@@ -1715,42 +1715,42 @@ onBeforeUnmount(() => {
 
 <style scoped>
 /* 重制默认样式 */
-button {
+.vue-chat-ai-template button {
 	outline: none;
 	border: none;
 	background-color: transparent;
 	cursor: pointer;
 }
 
-svg {
+.vue-chat-ai-template svg {
 	pointer-events: none;
 }
 
 /* markdown渲染 */
-.prose :deep(*, ::after, ::before, ::backdrop) {
+.vue-chat-ai-template .prose :deep(*, ::after, ::before, ::backdrop) {
 	box-sizing: border-box;
 	border: 0 solid;
 	margin: 0;
 }
-.prose :deep(p) {
+.vue-chat-ai-template .prose :deep(p) {
 	margin-block: 4px;
 }
 
-.prose :deep(hr) {
+.vue-chat-ai-template .prose :deep(hr) {
 	height: 1px;
 	background-color: var(--border-sharp);
 	border: none;
 }
 
-.prose :deep(blockquote) {
+.vue-chat-ai-template .prose :deep(blockquote) {
 	border-left: 4px solid var(--border-sharp);
 	padding-inline: 1rem;
 }
 
-.prose :deep(pre) {
+.vue-chat-ai-template .prose :deep(pre) {
 	overflow: scroll;
 }
-.prose :deep(ul, ol, menu) {
+.vue-chat-ai-template .prose :deep(ul, ol, menu) {
 	padding-inline: 1rem;
 	margin-block: 1rem;
 	height: fit-content;
@@ -1759,18 +1759,18 @@ svg {
 	/* list-style: none; */
 }
 
-.prose :deep(li) {
+.vue-chat-ai-template .prose :deep(li) {
 	margin-block: 4px;
 	padding-block: 0;
 	height: fit-content;
 }
 
 /* 主要 */
-.chat-ai-template * {
+.vue-chat-ai-template * {
 	box-sizing: border-box;
 }
 
-.chat-ai-template {
+.vue-chat-ai-template {
 	--white: #fff;
 	--black: #000;
 	--gray-0: #fff;
@@ -1800,7 +1800,7 @@ svg {
 	--gray-1000: #0b0b0b;
 }
 
-.chat-ai-template {
+.vue-chat-ai-template {
 	-webkit-overflow-scrolling: touch;
 	height: 100%;
 	position: relative;
@@ -1935,7 +1935,7 @@ svg {
 
 /* 暗色模式 */
 @media (prefers-color-scheme: dark) {
-	.chat-ai-template {
+	.vue-chat-ai-template {
 		--bg-primary: #212121;
 		--bg-primary-inverted: #fff;
 		--bg-secondary: #303030;
@@ -2017,29 +2017,29 @@ svg {
 }
 
 /* 通用按钮 */
-.hoverable:hover {
+.vue-chat-ai-template .hoverable:hover {
 	background-color: var(--menu-item-highlighted);
 }
-.hoverable:active {
+.vue-chat-ai-template .hoverable:active {
 	background-color: var(--menu-item-active);
 }
-.hoverable-icon {
+.vue-chat-ai-template .hoverable-icon {
 	color: transparent;
 }
-.hoverable:hover .hoverable-icon {
+.vue-chat-ai-template .hoverable:hover .hoverable-icon {
 	color: var(--text-tertiary);
 }
-.hoverable:hover .hoverable-icon:hover {
+.vue-chat-ai-template .hoverable:hover .hoverable-icon:hover {
 	color: var(--text-primary);
 }
-.hoverable:hover .hoverhidden {
+.vue-chat-ai-template .hoverable:hover .hoverhidden {
 	display: none;
 }
-.action-warning * {
+.vue-chat-ai-template .action-warning * {
 	color: var(--text-error);
 }
 
-.icon-btn-small {
+.vue-chat-ai-template .icon-btn-small {
 	border: none;
 	background-color: transparent;
 	cursor: pointer;
@@ -2050,7 +2050,7 @@ svg {
 	height: calc(var(--spacing) * 5);
 	border-radius: var(--radius-lg);
 }
-.icon-btn {
+.vue-chat-ai-template .icon-btn {
 	border: none;
 	background-color: transparent;
 	cursor: pointer;
@@ -2061,7 +2061,7 @@ svg {
 	height: calc(var(--spacing) * 9);
 	border-radius: var(--radius-lg);
 }
-.icon-btn.primary {
+.vue-chat-ai-template .icon-btn.primary {
 	background-color: var(--btn-bg-primary);
 	color: var(--btn-icon-primary);
 	border: none;
@@ -2069,13 +2069,13 @@ svg {
 	border-radius: 50%;
 	-webkit-tap-highlight-color: transparent;
 }
-.icon-btn.primary:hover {
+.vue-chat-ai-template .icon-btn.primary:hover {
 	background-color: var(--btn-bg-primary-hover);
 }
-.icon-btn.primary:active {
+.vue-chat-ai-template .icon-btn.primary:active {
 	background-color: var(--btn-bg-primary-active);
 }
-.icon-btn.secondary {
+.vue-chat-ai-template .icon-btn.secondary {
 	background-color: var(--btn-bg-secondary);
 	color: var(--btn-icon-secondary);
 	border: none;
@@ -2083,14 +2083,14 @@ svg {
 	border-radius: 50%;
 	-webkit-tap-highlight-color: transparent;
 }
-.icon-btn.secondary:hover {
+.vue-chat-ai-template .icon-btn.secondary:hover {
 	background-color: var(--btn-bg-secondary-hover);
 }
-.icon-btn.secondary:active {
+.vue-chat-ai-template .icon-btn.secondary:active {
 	background-color: var(--btn-bg-secondary-active);
 }
 
-.icon {
+.vue-chat-ai-template .icon {
 	border-radius: none;
 	padding: 0 0 0 0;
 	margin: none;
@@ -2098,7 +2098,7 @@ svg {
 	height: calc(var(--spacing) * 5);
 }
 
-.icon-l {
+.vue-chat-ai-template .icon-l {
 	border-radius: none;
 	padding: 0 0 0 0;
 	margin: none;
@@ -2106,14 +2106,14 @@ svg {
 	height: calc(var(--spacing) * 6);
 }
 
-.menu-separator {
+.vue-chat-ai-template .menu-separator {
 	height: 1px;
 	background-color: var(--border-sharp);
 	margin-block: 0;
 	margin-inline: calc(var(--spacing) * 4);
 }
 
-.modal {
+.vue-chat-ai-template .modal {
 	position: fixed;
 	top: 0;
 	left: 0;
@@ -2126,7 +2126,7 @@ svg {
 	align-items: center;
 }
 /* sidebar */
-.sidebar {
+.vue-chat-ai-template .sidebar {
 	/* position: fixed; */
 	position: relative;
 	top: 0;
@@ -2144,14 +2144,14 @@ svg {
 		width 0.4s ease-in-out,
 		opacity 0.1s ease-in-out;
 }
-.sidebar.show {
+.vue-chat-ai-template .sidebar.show {
 	display: flex;
 	left: 0;
 	opacity: 1;
 	width: var(--sidebar-width);
 }
 
-.sidebar-header {
+.vue-chat-ai-template .sidebar-header {
 	padding-inline: calc(var(--spacing) * 2);
 	color: var(--text-primary);
 	display: flex;
@@ -2165,7 +2165,7 @@ svg {
 	background-color: transparent;
 }
 
-.sidebar-actions {
+.vue-chat-ai-template .sidebar-actions {
 	padding: calc(var(--spacing) * 2);
 	display: flex;
 	flex-direction: column;
@@ -2176,32 +2176,32 @@ svg {
 	background-color: transparent;
 }
 
-.sidebar-body {
+.vue-chat-ai-template .sidebar-body {
 	flex: 1;
 	overflow-y: auto;
 	padding: calc(var(--spacing) * 2);
 	background-color: transparent;
 }
 
-.sidebar-footer {
+.vue-chat-ai-template .sidebar-footer {
 	padding: calc(var(--spacing) * 2);
 	border-top: 1px solid var(--border-sharp);
 	text-align: right;
 	background-color: transparent;
 }
 
-.history-list {
+.vue-chat-ai-template .history-list {
 	display: flex;
 	flex-direction: column;
 	gap: calc(var(--spacing) * 2);
 	color: var(--text-primary);
 }
-.history-list .current {
+.vue-chat-ai-template .history-list .current {
 	background-color: var(--menu-item-active);
 }
 
 /* item */
-.sidebar-menu-item {
+.vue-chat-ai-template .sidebar-menu-item {
 	border: none;
 	background-color: transparent;
 	outline: none;
@@ -2225,17 +2225,17 @@ svg {
 	display: flex;
 	position: relative;
 }
-.history-list .sidebar-menu-item {
+.vue-chat-ai-template .history-list .sidebar-menu-item {
 	justify-content: space-between;
 	align-items: center;
 }
 
-.sidebar-menu-item-icon {
+.vue-chat-ai-template .sidebar-menu-item-icon {
 	display: flex;
 	align-items: center;
 	justify-content: center;
 }
-.sidebar-menu-item-text {
+.vue-chat-ai-template .sidebar-menu-item-text {
 	display: flex;
 	flex-grow: 1;
 	align-items: center;
@@ -2243,7 +2243,7 @@ svg {
 }
 
 /* 主界面 */
-.chat-container {
+.vue-chat-ai-template .chat-container {
 	-webkit-overflow-scrolling: touch;
 	height: 100%;
 	flex: 1;
@@ -2256,7 +2256,7 @@ svg {
 }
 
 /* 空白页面标题 */
-.page-title-container {
+.vue-chat-ai-template .page-title-container {
 	color: var(--text-primary);
 	font-size: 24px;
 	position: absolute;
@@ -2268,7 +2268,7 @@ svg {
 }
 
 /* 顶部导航 */
-.chat-nav {
+.vue-chat-ai-template .chat-nav {
 	height: var(--header-height);
 	width: 100%;
 	position: sticky;
@@ -2282,17 +2282,17 @@ svg {
 	backdrop-filter: blur(10px);
 	z-index: 40;
 }
-.chat-nav.top {
+.vue-chat-ai-template .chat-nav.top {
 	box-shadow: 0 1px 0 transparent;
 }
 
-.chat-nav-left {
+.vue-chat-ai-template .chat-nav-left {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
 	justify-content: center;
 }
-.chat-nav-right {
+.vue-chat-ai-template .chat-nav-right {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
@@ -2302,7 +2302,7 @@ svg {
 	top: calc(var(--spacing) * 2);
 }
 
-.conversation-usage-pill {
+.vue-chat-ai-template .conversation-usage-pill {
 	display: inline-flex;
 	align-items: center;
 	height: calc(var(--spacing) * 8);
@@ -2316,12 +2316,12 @@ svg {
 	white-space: nowrap;
 }
 
-.dropdown {
+.vue-chat-ai-template .dropdown {
 	position: relative;
 	display: inline-block;
 }
 
-.dropdown-menu {
+.vue-chat-ai-template .dropdown-menu {
 	position: fixed;
 	width: 260px;
 
@@ -2332,31 +2332,17 @@ svg {
 	display: none;
 	z-index: 10;
 }
-/* .dropdown.show .dropdown-menu {
-	display: block;
-}
 
-.dropdown-right .dropdown-menu {
-	left: auto;
-	right: 0;
-}
-.dropup-right .dropdown-menu {
-	left: 0;
-	right: auto;
-	bottom: calc(var(--spacing) * 10.5);
-	top: auto;
-} */
-
-.dropdown-btn {
+.vue-chat-ai-template .dropdown-btn {
 	display: flex;
 }
-.dropdown-btn-text {
+.vue-chat-ai-template .dropdown-btn-text {
 	/* 超出部分省略 */
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
 
-.model-switcher-btn {
+.vue-chat-ai-template .model-switcher-btn {
 	/*   font-normal whitespace-nowrap focus-visible:outline-none */
 	display: flex;
 	cursor: pointer;
@@ -2372,7 +2358,7 @@ svg {
 	white-space: nowrap;
 }
 
-.menu-item {
+.vue-chat-ai-template .menu-item {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
@@ -2381,22 +2367,22 @@ svg {
 	border-radius: 10px;
 }
 
-.menu-item input {
+.vue-chat-ai-template .menu-item input {
 	/* 隐藏input */
 	display: none;
 }
-.menu-item .checkmark {
+.vue-chat-ai-template .menu-item .checkmark {
 	opacity: 0;
 }
-.menu-item input:checked ~ .checkmark {
+.vue-chat-ai-template .menu-item input:checked ~ .checkmark {
 	opacity: 1;
 }
 
-.checkmark {
+.vue-chat-ai-template .checkmark {
 	color: var(--text-primary);
 }
 
-.menu-left {
+.vue-chat-ai-template .menu-left {
 	display: flex;
 	justify-content: center;
 	align-items: center;
@@ -2404,29 +2390,21 @@ svg {
 	color: var(--content-primary);
 }
 
-.menu-item-title {
+.vue-chat-ai-template .menu-item-title {
 	display: flex;
 	align-items: center;
 	gap: calc(var(--spacing) * 1);
 	font-size: 14px;
 }
 
-.menu-item-desc {
+.vue-chat-ai-template .menu-item-desc {
 	margin-bottom: calc(var(--spacing) * 0.5);
 	color: var(--text-tertiary);
 	font-size: 12px;
 }
 
-/* 非主要功能 */
-.page-back {
-	transform: rotate(-90deg);
-	color: var(--text-primary);
-	padding: calc(var(--spacing) * 0.5);
-	border: none !important;
-}
-
 /* 底部占位 */
-.bottom-anchor {
+.vue-chat-ai-template .bottom-anchor {
 	content: '';
 	height: 1px;
 	width: 100%;
@@ -2434,7 +2412,7 @@ svg {
 }
 
 /* 对话 */
-.chat-msg-container {
+.vue-chat-ai-template .chat-msg-container {
 	display: flex;
 	flex-direction: column;
 	height: auto;
@@ -2445,28 +2423,28 @@ svg {
 	color: var(--text-primary);
 }
 /* all msg */
-.chat-msg {
+.vue-chat-ai-template .chat-msg {
 	background-color: transparent;
 	padding-inline: calc(var(--spacing) * 4);
 }
 /* ai msg */
-.chat-msg-assistant {
+.vue-chat-ai-template .chat-msg-assistant {
 	background-color: transparent;
 }
-.chat-msg-assistant:last-child {
+.vue-chat-ai-template .chat-msg-assistant:last-child {
 	padding-bottom: calc(var(--spacing) * 10);
 	min-height: calc(100vh - var(--header-height) - var(--spacing) * 19 - var(--spacing) * 50);
 }
-.chat-msg-assistant > .chat-msg-content {
+.vue-chat-ai-template .chat-msg-assistant > .chat-msg-content {
 	background-color: transparent;
 }
-.chat-msg-assistant > .chat-msg-thinking {
+.vue-chat-ai-template .chat-msg-assistant > .chat-msg-thinking {
 	/* background-color: var(--bg-secondary); */
 	padding-bottom: calc(var(--spacing) * 8);
 	margin-bottom: calc(var(--spacing) * 4);
 }
 /* user msg */
-.chat-msg-user {
+.vue-chat-ai-template .chat-msg-user {
 	background-color: transparent;
 	gap: calc(var(--spacing) * 1);
 	padding-top: calc(var(--spacing) * 3);
@@ -2474,7 +2452,7 @@ svg {
 	flex-direction: column;
 	align-items: flex-end;
 }
-.chat-msg-user > .chat-msg-content {
+.vue-chat-ai-template .chat-msg-user > .chat-msg-content {
 	padding-block: calc(var(--spacing) * 3); /* need to do multline 3 line 1.5 */
 	padding-inline: calc(var(--spacing) * 4);
 	border-radius: 18px;
@@ -2488,7 +2466,7 @@ svg {
 	background-color: var(--message-surface);
 }
 
-.chat-msg-content {
+.vue-chat-ai-template .chat-msg-content {
 	white-space: pre-wrap;
 	word-wrap: break-word;
 	word-break: break-all;
@@ -2498,7 +2476,7 @@ svg {
 	text-align: left;
 }
 
-.message-usage {
+.vue-chat-ai-template .message-usage {
 	display: flex;
 	flex-wrap: wrap;
 	gap: calc(var(--spacing) * 2);
@@ -2509,7 +2487,7 @@ svg {
 }
 
 /* action */
-.action-wrapper {
+.vue-chat-ai-template .action-wrapper {
 	display: flex;
 	justify-content: flex-end;
 	position: relative;
@@ -2517,15 +2495,15 @@ svg {
 	background-color: transparent;
 }
 
-.chat-msg-user .action-wrapper {
+.vue-chat-ai-template .chat-msg-user .action-wrapper {
 	justify-content: flex-end;
 }
-.chat-msg-assistant .action-wrapper {
+.vue-chat-ai-template .chat-msg-assistant .action-wrapper {
 	justify-content: flex-start;
 	transform: translateX(calc(var(--spacing) * -1.5));
 }
 
-.action-container {
+.vue-chat-ai-template .action-container {
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
@@ -2546,20 +2524,20 @@ svg {
 	touch-action: auto;
 }
 
-.chat-msg:hover .action-container,
-.chat-msg:focus-within .action-container,
-.action-container[data-state='open'] {
+.vue-chat-ai-template .chat-msg:hover .action-container,
+.vue-chat-ai-template .chat-msg:focus-within .action-container,
+.vue-chat-ai-template .action-container[data-state='open'] {
 	opacity: 1;
 	pointer-events: auto;
 }
 /* 最后一项永远显示 */
-.chat-msg:last-child .action-container {
+.vue-chat-ai-template .chat-msg:last-child .action-container {
 	opacity: 1;
 	pointer-events: auto;
 }
 
 /* 按钮样式 */
-.action-btn {
+.vue-chat-ai-template .action-btn {
 	color: var(--text-secondary);
 	background-color: transparent;
 	display: flex;
@@ -2574,16 +2552,16 @@ svg {
 	border-radius: var(--radius-lg); /* rounded-lg */
 }
 
-.action-btn:active {
+.vue-chat-ai-template .action-btn:active {
 	background-color: var(--bg-secondary);
 }
 
-.action-btn:hover {
+.vue-chat-ai-template .action-btn:hover {
 	background-color: var(--bg-secondary);
 }
 
 /* input-container */
-.chat-input-container {
+.vue-chat-ai-template .chat-input-container {
 	display: flex;
 	padding-bottom: calc(var(--spacing) * 5);
 	padding-inline: calc(var(--spacing) * 5);
@@ -2596,7 +2574,7 @@ svg {
 	bottom: 0;
 	z-index: 10;
 }
-.chat-input-container::after {
+.vue-chat-ai-template .chat-input-container::after {
 	content: '';
 	position: absolute;
 	inset: 0;
@@ -2612,7 +2590,7 @@ svg {
 }
 
 /* toBottom */
-.scroll-bottom-btn {
+.vue-chat-ai-template .scroll-bottom-btn {
 	position: absolute;
 	cursor: pointer;
 	z-index: 1;
@@ -2636,7 +2614,7 @@ svg {
 }
 
 /* input */
-.chat-input {
+.vue-chat-ai-template .chat-input {
 	width: 100%;
 	height: auto;
 	background-color: var(--input-bg);
@@ -2659,7 +2637,7 @@ svg {
 		padding 0.2s ease;
 }
 
-.chat-input.multiline {
+.vue-chat-ai-template .chat-input.multiline {
 	grid-template-areas:
 		'header header header'
 		'primary primary primary'
@@ -2668,23 +2646,23 @@ svg {
 	grid-template-rows: auto auto auto;
 }
 
-.grid-area-header {
+.vue-chat-ai-template .grid-area-header {
 	grid-area: header;
 }
-.grid-area-footer {
+.vue-chat-ai-template .grid-area-footer {
 	grid-area: footer;
 }
-.grid-area-trailing {
+.vue-chat-ai-template .grid-area-trailing {
 	grid-area: trailing;
 }
-.grid-area-leading {
+.vue-chat-ai-template .grid-area-leading {
 	grid-area: leading;
 }
-.grid-area-primary {
+.vue-chat-ai-template .grid-area-primary {
 	grid-area: primary;
 }
 
-.chat-input .chat-input-editor {
+.vue-chat-ai-template .chat-input .chat-input-editor {
 	background-color: transparent;
 	padding-block: calc(var(--spacing) * 1.5);
 	padding-inline: calc(var(--spacing) * 2.5);
@@ -2699,37 +2677,37 @@ svg {
 	min-width: 0;
 	will-change: height;
 }
-/* .chat-input.multiline .chat-input-editor {
+/* .vue-chat-ai-template .chat-input.multiline .chat-input-editor {
 } */
 
-.chat-input.disabled {
+.vue-chat-ai-template .chat-input.disabled {
 	opacity: 0.5;
 }
 
 /* placeholder  */
 /* .chat-input .chat-input-editor:empty:before 也可使用 :empty */
-.chat-input .chat-input-editor[data-empty='true']:before {
+.vue-chat-ai-template .chat-input .chat-input-editor[data-empty='true']:before {
 	position: absolute;
 	content: attr(placeholder);
 	color: var(--placeholder-color);
 	pointer-events: none;
 }
 
-.chat-input .chat-input-editor:focus {
+.vue-chat-ai-template .chat-input .chat-input-editor:focus {
 	/* remove browser default outline */
 	outline: none;
 }
 
-.chat-input .chat-input-bar {
+.vue-chat-ai-template .chat-input .chat-input-bar {
 	display: flex;
 }
 
 /* 640px 适配 */
 @media (max-width: 768px) {
-	.sidebar {
+	.vue-chat-ai-template .sidebar {
 		position: fixed;
 	}
-	.modal {
+	.vue-chat-ai-template .modal {
 		display: flex;
 	}
 }
