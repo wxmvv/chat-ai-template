@@ -67,20 +67,26 @@ const md = markdownit({
 
 // provider model utils
 import { deepseek, ollama } from '../core/ai';
+import {
+	aggregateUsage,
+	createEmptyUsage,
+	formatUsageLabel,
+	mergeUsage
+} from '../core/ai/core/token-usage.js';
 import { UUID, downloadJSON, formatTime, importFile } from '../core/utils';
 
 const providerList = [
-	{
-		name: 'ollama',
-		client: ollama(),
-		icon: () => Star,
-		desc: '本地小羊驼🦙'
-	},
 	{
 		name: 'deepseek',
 		client: deepseek(),
 		icon: () => Gpt,
 		desc: '深度求索！'
+	},
+	{
+		name: 'ollama',
+		client: ollama(),
+		icon: () => Star,
+		desc: '本地小羊驼🦙'
 	}
 ];
 const provider = ref(providerList[1]);
@@ -301,6 +307,8 @@ const messageList = computed(() => {
 const hasMessages = computed(() => {
 	return messageList.value.length > 0;
 });
+const conversationUsage = computed(() => aggregateUsage(messageList.value));
+const conversationUsageLabel = computed(() => formatUsageLabel(conversationUsage.value));
 
 // stream
 let chatStream = null;
@@ -609,6 +617,13 @@ const updateMessageStatus = (id, status) => {
 	msg.status = status;
 };
 
+const updateMessageUsage = (id, usage) => {
+	const msg = messageMap.value.get(id);
+	if (!msg) return;
+
+	msg.usage = mergeUsage(msg.usage, usage);
+};
+
 const updateMessageThinkingStatus = (id, thinking) => {
 	const msg = messageMap.value.get(id);
 	if (!msg) return;
@@ -734,6 +749,7 @@ const AddAssistantMessage = (userQuestionId, extraPayload = {}, index) => {
 		raw: '', // 初始为空字符串, 原始token
 		thinkingRaw: null,
 		tail: '', // 正在流式的纯文本
+		usage: createEmptyUsage(),
 		status: 'streaming',
 		parent: userQuestionId,
 		children: [],
@@ -853,13 +869,14 @@ const startStreaming = async (assistantMessageId, msg, params) => {
 			endMessageRendering(assistantMessageId);
 			updateMessageStatus(assistantMessageId, 'aborted');
 		},
-		onFinish: () => {
+		onFinish: (result) => {
 			if (reasoningActive) {
 				console.log('stream onThinkingEnd');
 				reasoningActive = false;
 				updateMessageThinkingStatus(assistantMessageId, false);
 			}
 			console.log('stream onFinish');
+			updateMessageUsage(assistantMessageId, result?.usage);
 			endMessageRendering(assistantMessageId);
 			isStreaming.value = false;
 			updateMessageStatus(assistantMessageId, 'sent');
@@ -1438,6 +1455,9 @@ onBeforeUnmount(() => {
 					</div>
 				</div>
 				<div class="chat-nav-right">
+					<div v-if="conversationUsageLabel" class="conversation-usage-pill">
+						{{ conversationUsageLabel }}
+					</div>
 					<!-- 更多 -->
 					<div class="dropdown dropdown-right">
 						<button
@@ -1502,6 +1522,15 @@ onBeforeUnmount(() => {
 						</div>
 					</template>
 					<!-- message下的操作按钮 -->
+					<div v-if="message.role === 'assistant' && formatUsageLabel(message.usage)" class="message-usage">
+						<span>{{ formatUsageLabel(message.usage) }}</span>
+						<span v-if="typeof message.usage?.inputTokens === 'number'">
+							输入 {{ message.usage.inputTokens.toLocaleString('en-US') }}
+						</span>
+						<span v-if="typeof message.usage?.outputTokens === 'number'">
+							输出 {{ message.usage.outputTokens.toLocaleString('en-US') }}
+						</span>
+					</div>
 					<div class="action-wrapper">
 						<div class="action-container">
 							<template v-if="message.status === 'sent'">
@@ -2264,9 +2293,25 @@ svg {
 .chat-nav-right {
 	display: flex;
 	flex-direction: row;
+	align-items: center;
+	gap: calc(var(--spacing) * 2);
 	position: absolute;
 	right: calc(var(--spacing) * 2);
 	top: calc(var(--spacing) * 2);
+}
+
+.conversation-usage-pill {
+	display: inline-flex;
+	align-items: center;
+	height: calc(var(--spacing) * 8);
+	padding-inline: calc(var(--spacing) * 3);
+	border-radius: 999px;
+	background-color: var(--main-surface-secondary);
+	border: 1px solid var(--border-sharp);
+	color: var(--text-secondary);
+	font-size: var(--text-xs);
+	line-height: 1;
+	white-space: nowrap;
 }
 
 .dropdown {
@@ -2449,6 +2494,16 @@ svg {
 	font-size: 16px;
 	color: var(--text-primary);
 	text-align: left;
+}
+
+.message-usage {
+	display: flex;
+	flex-wrap: wrap;
+	gap: calc(var(--spacing) * 2);
+	margin-top: calc(var(--spacing) * 2);
+	color: var(--text-tertiary);
+	font-size: var(--text-xs);
+	line-height: 1.4;
 }
 
 /* action */

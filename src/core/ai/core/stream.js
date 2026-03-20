@@ -1,3 +1,5 @@
+import { createEmptyUsage, mergeUsage } from './token-usage.js';
+
 const createAbortError = () => {
 	try {
 		return new DOMException('The operation was aborted.', 'AbortError');
@@ -132,11 +134,7 @@ const streamText = ({
 			text: '',
 			reasoning: '',
 			finishReason: 'other',
-			usage: {
-				inputTokens: undefined,
-				outputTokens: undefined,
-				totalTokens: undefined
-			}
+			usage: createEmptyUsage()
 		};
 
 		try {
@@ -184,10 +182,7 @@ const streamText = ({
 
 						if (part.type === 'finish') {
 							result.finishReason = part.finishReason;
-							result.usage = {
-								...result.usage,
-								...(part.usage || {})
-							};
+							result.usage = mergeUsage(result.usage, part.usage);
 						}
 					}
 				}

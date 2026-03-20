@@ -1,3 +1,5 @@
+import { withComputedTotal } from './token-usage.js';
+
 const normalizeFinishReason = (value) => {
 	switch (value) {
 		case 'stop':
@@ -11,14 +13,12 @@ const normalizeFinishReason = (value) => {
 	}
 };
 
-const normalizeUsage = ({ inputTokens, outputTokens }) => ({
-	inputTokens,
-	outputTokens,
-	totalTokens:
-		typeof inputTokens === 'number' && typeof outputTokens === 'number'
-			? inputTokens + outputTokens
-			: undefined
-});
+const normalizeUsage = ({ inputTokens, outputTokens, totalTokens }) =>
+	withComputedTotal({
+		inputTokens,
+		outputTokens,
+		totalTokens
+	});
 
 const extractDeepSeekStreamParts = (payload = {}) => {
 	const choice = payload.choices?.[0] || {};

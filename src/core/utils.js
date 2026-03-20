@@ -30,6 +30,7 @@ const downloadJSON = (fileName, json) => {
 	URL.revokeObjectURL(url);
 };
 
+// 导入文件
 const importFile = (onLoad, accept = '.json,application/json') => {
 	if (typeof document === 'undefined') {
 		throw new Error('File import is only available in browser environments.');
