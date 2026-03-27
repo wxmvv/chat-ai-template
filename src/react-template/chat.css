@@ -760,6 +760,48 @@
 	text-align: left;
 }
 
+@keyframes gradient {
+	0% {
+		background-position: 130% 0;
+	}
+
+	100% {
+		background-position: -120% 0;
+	}
+}
+
+.react-chat-ai-template .thinking-indicator {
+	position: relative;
+	display: inline-flex;
+	min-height: 20px;
+	font-variant: tabular-nums;
+	font-feature-settings: 'tnum';
+	line-height: 1.5;
+	-webkit-font-smoothing: antialiased;
+	font-size: 14px;
+	font-weight: 500;
+	letter-spacing: 0.02em;
+	box-sizing: border-box;
+	color: color-mix(in srgb, var(--text-secondary) 88%, var(--bg-primary) 12%);
+	margin-bottom: 12px;
+	user-select: none;
+}
+
+.react-chat-ai-template .thinking-indicator::after {
+	position: absolute;
+	content: attr(data-text);
+	grid-area: 1 / 1;
+	pointer-events: none;
+	font: inherit;
+	font-family: inherit;
+	font-variant: inherit;
+	font-feature-settings: inherit;
+	font-weight: inherit;
+	letter-spacing: inherit;
+	line-height: inherit;
+	display: block;
+}
+
 .react-chat-ai-template .message-usage {
 	display: flex;
 	flex-wrap: wrap;

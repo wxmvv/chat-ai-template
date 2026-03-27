@@ -1436,7 +1436,15 @@ export default function Chat() {
 						>
 							{message.thinkingRaw ? (
 								<>
-									{message.thinking ? <div>thinking...</div> : null}
+									{message.thinking ? (
+										<div
+											data-text="thinking..."
+											aria-label="thinking..."
+											className="thinking-indicator"
+										>
+											thinking...
+										</div>
+									) : null}
 									<div
 										className="chat-msg-content chat-msg-thinking"
 										onClick={() => toggleFoldThinking(message.id)}

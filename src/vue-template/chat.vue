@@ -1505,7 +1505,14 @@ onBeforeUnmount(() => {
 					}"
 				>
 					<template v-if="message.thinkingRaw && message.thinkingRaw !== ''">
-						<template v-if="message.thinking">thinking...</template>
+						<div
+							v-if="message.thinking"
+							class="thinking-indicator"
+							data-text="thinking..."
+							aria-label="thinking..."
+						>
+							thinking...
+						</div>
 						<div
 							v-if="message.thinkingRaw"
 							class="chat-msg-content chat-msg-thinking"
@@ -2493,6 +2500,74 @@ onBeforeUnmount(() => {
 	font-size: 16px;
 	color: var(--text-primary);
 	text-align: left;
+}
+
+@keyframes gradient {
+	0% {
+		background-position: 130% 0;
+	}
+
+	100% {
+		background-position: -120% 0;
+	}
+}
+
+.vue-chat-ai-template .thinking-indicator {
+	position: relative;
+	display: inline-flex;
+	min-height: 20px;
+	font-variant: tabular-nums;
+	font-feature-settings: 'tnum';
+	line-height: 1.5;
+	-webkit-font-smoothing: antialiased;
+	font-size: 14px;
+	font-weight: 500;
+	letter-spacing: 0.02em;
+	box-sizing: border-box;
+	color: color-mix(in srgb, var(--text-secondary) 88%, var(--bg-primary) 12%);
+	margin-bottom: 12px;
+	user-select: none;
+}
+
+.vue-chat-ai-template .thinking-indicator::after {
+	position: absolute;
+	content: attr(data-text);
+	grid-area: 1 / 1;
+	pointer-events: none;
+	font: inherit;
+	font-family: inherit;
+	font-variant: inherit;
+	font-feature-settings: inherit;
+	font-weight: inherit;
+	letter-spacing: inherit;
+	line-height: inherit;
+	display: block;
+}
+
+.vue-chat-ai-template .thinking-indicator::after {
+	color: rgba(0, 0, 0, 0);
+	background-clip: text;
+	-webkit-background-clip: text;
+	-webkit-text-fill-color: transparent;
+	background-image: linear-gradient(
+		90deg,
+		rgba(255, 255, 255, 0) 0%,
+		rgba(255, 255, 255, 0) 38%,
+		color-mix(in srgb, var(--text-primary) 68%, #fff 32%) 50%,
+		rgba(255, 255, 255, 0) 62%,
+		rgba(255, 255, 255, 0) 100%
+	);
+	background-repeat: no-repeat;
+	background-size: 220% 100%;
+	background-position: 130% 0;
+	animation: gradient 2.2s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.vue-chat-ai-template .thinking-indicator::after {
+		animation: none;
+		background-position: 50% 0;
+	}
 }
 
 .vue-chat-ai-template .message-usage {
